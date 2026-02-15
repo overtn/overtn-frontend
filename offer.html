@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OVERTN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Unbounded:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="container nav-wrap">
+      <nav class="nav fade-up">
+        <div class="nav-left">
+          <a href="buyers.html">Покупателям</a>
+          <a href="support.html">Поддержка</a>
+        </div>
+        <a class="logo-link" href="index.html">
+          <img src="assets/logo.png" alt="Логотип бренда" onerror="this.src='assets/logo-placeholder.svg'" />
+        </a>
+        <div class="nav-right">
+          <a class="social-link" href="https://www.instagram.com/overtn.brand/" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <rect x="3" y="3" width="18" height="18" rx="6" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+            </svg>
+          </a>
+          <a class="social-link" href="https://t.me/overtn_brand" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M21.5 3.5L2.8 11.2c-.6.3-.6 1.1.1 1.3l4.9 1.6 2 4.7c.2.6 1 .7 1.4.2l2.9-2.8 4.8 3.5c.5.4 1.2.1 1.4-.5L22 4.8c.2-.8-.5-1.5-1.3-1.3z" />
+            </svg>
+          </a>
+          <button class="cart-button" type="button" data-cart-toggle>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+              <path d="M3 4h2l2.4 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 7H7" />
+              <circle cx="10" cy="20" r="1.6" />
+              <circle cx="18" cy="20" r="1.6" />
+            </svg>
+            <span class="cart-badge" data-cart-count>0</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+
+    <main class="container">
+      <section class="panel page-hero fade-up">
+        <h1>Публичная оферта</h1>
+        <p>
+          Здесь будет текст публичной оферты и условия продажи. Мы заполним этот блок позже.
+        </p>
+      </section>
+    </main>
+
+    <div class="cart-overlay"></div>
+    <div class="cart-drawer">
+      <div class="cart-header">
+        <strong>Ваш заказ</strong>
+        <button class="cart-close" type="button" data-cart-close>×</button>
+      </div>
+      <div data-cart-items></div>
+      <div data-cart-discount style="font-size:13px; color:#b24436;"></div>
+      <div class="cart-summary">
+        <span>Сумма:</span>
+        <strong data-cart-total>0 RUB</strong>
+      </div>
+      <div class="cart-actions">
+        <a href="checkout.html" data-checkout-link>Оформить заказ</a>
+      </div>
+    </div>
+
+    <div class="toast"></div>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

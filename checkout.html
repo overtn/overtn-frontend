@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OVERTN — Оформление заказа</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Unbounded:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <main class="checkout-layout container">
+      <header class="checkout-topbar">
+        <button type="button" class="checkout-nav-btn" data-go-back>←</button>
+        <h1>Ваш заказ</h1>
+        <button type="button" class="checkout-nav-btn" data-go-back>✕</button>
+      </header>
+
+      <div class="checkout-grid">
+        <section class="checkout-form-col">
+          <form id="checkout-form" class="checkout-form" novalidate>
+            <div class="form-row">
+              <label>
+                Email
+                <input type="email" name="email" placeholder="overtn@yandex.ru" required data-email />
+              </label>
+              <div class="muted form-error" data-email-error>Введите корректный email.</div>
+            </div>
+
+            <div class="form-row">
+              <label>Телефон</label>
+              <div class="phone-row">
+                <span class="phone-prefix">+7</span>
+                <input
+                  type="tel"
+                  name="phoneLocal"
+                  placeholder="(000) 000-00-00"
+                  inputmode="numeric"
+                  autocomplete="tel"
+                  required
+                  data-phone
+                />
+              </div>
+              <div class="muted form-error" data-phone-error>Введите корректный номер телефона.</div>
+            </div>
+
+            <div class="checkout-block">
+              <h2>Доставка</h2>
+              <div class="form-row">
+                <label>
+                  Город
+                  <div class="search-field">
+                    <span>⌕</span>
+                    <input type="text" name="city" list="city-list" placeholder="Введите город" required data-city />
+                  </div>
+                </label>
+                <datalist id="city-list">
+                  <option value="Москва"></option>
+                  <option value="Санкт-Петербург"></option>
+                  <option value="Казань"></option>
+                  <option value="Екатеринбург"></option>
+                  <option value="Новосибирск"></option>
+                </datalist>
+                <div class="muted" data-city-preview>Россия, г. —</div>
+              </div>
+
+              <div class="delivery-options">
+                <label class="radio-row">
+                  <input type="radio" name="shippingMethod" value="CDEK_PVZ" data-shipping-method disabled />
+                  <span>СДЭК — до пункта выдачи</span>
+                </label>
+                <div class="form-row" data-pvz-fields hidden>
+                  <label>
+                    Пункт получения
+                    <input type="text" name="pvzAddress" list="pvz-list" placeholder="Выберите пункт выдачи" data-pvz-address />
+                  </label>
+                  <datalist id="pvz-list"></datalist>
+                </div>
+
+                <label class="radio-row">
+                  <input type="radio" name="shippingMethod" value="CDEK_COURIER" data-shipping-method disabled />
+                  <span>СДЭК — курьером до двери</span>
+                </label>
+                <div class="form-row" data-courier-fields hidden>
+                  <label>
+                    Получатель (ФИО полностью)
+                    <input
+                      type="text"
+                      name="recipientFullName"
+                      placeholder="Иванов Иван Иванович"
+                      pattern="^[A-Za-zА-Яа-яЁё-]+(?:\s+[A-Za-zА-Яа-яЁё-]+)+$"
+                      data-recipient-name
+                    />
+                  </label>
+                  <div class="form-inline">
+                    <label>Улица <input type="text" name="street" data-courier-street /></label>
+                  </div>
+                  <div class="form-inline two-cols">
+                    <label>Дом <input type="text" name="house" data-courier-house /></label>
+                    <label>Квартира/Офис <input type="text" name="apartment" data-courier-apartment /></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="checkout-block">
+              <h2>Сертификат / Промокод</h2>
+              <div class="form-row">
+                <div class="promo-row">
+                  <input type="text" placeholder="Введите промокод" data-promo-input />
+                  <button type="button" data-promo-apply>Применить</button>
+                </div>
+                <div class="muted" data-promo-result></div>
+              </div>
+            </div>
+
+            <label class="checkbox-row">
+              <input type="checkbox" required data-consent />
+              <span>Я даю согласие на обработку моих персональных данных в соответствии с политикой конфиденциальности.</span>
+            </label>
+
+            <button class="cta checkout-submit" type="submit" disabled data-submit>Оформить заказ</button>
+            <div class="muted" data-checkout-result></div>
+            <div class="muted form-error" data-checkout-error></div>
+          </form>
+        </section>
+
+        <aside class="checkout-order-col">
+          <div class="checkout-order-list" data-order-items></div>
+          <div class="checkout-summary">
+            <div><span>Товары</span><strong data-subtotal>0 RUB</strong></div>
+            <div><span>Доставка</span><strong data-shipping>—</strong></div>
+            <div data-discount-row hidden><span>Скидка</span><strong data-discount>0 RUB</strong></div>
+            <div class="checkout-total"><span>Итого</span><strong data-total>0 RUB</strong></div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script>
+      const cartKey = "brand-cart";
+      const SHIPPING_COSTS = { CDEK_PVZ: 550, CDEK_COURIER: 790 };
+      const PVZ_BY_CITY = {
+        Москва: ["Москва, ул. Тверская, 10", "Москва, пр-т Мира, 42"],
+        "Санкт-Петербург": ["Санкт-Петербург, Невский пр., 60", "Санкт-Петербург, Лиговский пр., 88"],
+        Казань: ["Казань, ул. Баумана, 30"],
+        Екатеринбург: ["Екатеринбург, ул. Малышева, 25"],
+        Новосибирск: ["Новосибирск, Красный проспект, 101"],
+      };
+
+      const form = document.getElementById("checkout-form");
+      const orderItemsEl = document.querySelector("[data-order-items]");
+      const subtotalEl = document.querySelector("[data-subtotal]");
+      const shippingEl = document.querySelector("[data-shipping]");
+      const discountRow = document.querySelector("[data-discount-row]");
+      const discountEl = document.querySelector("[data-discount]");
+      const totalEl = document.querySelector("[data-total]");
+      const submitBtn = document.querySelector("[data-submit]");
+      const checkoutResult = document.querySelector("[data-checkout-result]");
+      const checkoutError = document.querySelector("[data-checkout-error]");
+      const cityInput = document.querySelector("[data-city]");
+      const cityPreview = document.querySelector("[data-city-preview]");
+      const phoneInput = document.querySelector("[data-phone]");
+      const emailInput = document.querySelector("[data-email]");
+      const emailError = document.querySelector("[data-email-error]");
+      const phoneError = document.querySelector("[data-phone-error]");
+      const shippingRadios = Array.from(document.querySelectorAll("[data-shipping-method]"));
+      const pvzFields = document.querySelector("[data-pvz-fields]");
+      const pvzInput = document.querySelector("[data-pvz-address]");
+      const pvzList = document.getElementById("pvz-list");
+      const courierFields = document.querySelector("[data-courier-fields]");
+      const recipientInput = document.querySelector("[data-recipient-name]");
+      const streetInput = document.querySelector("[data-courier-street]");
+      const houseInput = document.querySelector("[data-courier-house]");
+      const apartmentInput = document.querySelector("[data-courier-apartment]");
+      const consentInput = document.querySelector("[data-consent]");
+      const promoInput = document.querySelector("[data-promo-input]");
+      const promoApplyBtn = document.querySelector("[data-promo-apply]");
+      const promoResult = document.querySelector("[data-promo-result]");
+
+      const touched = { email: false, phone: false };
+      let submitted = false;
+      let appliedPromo = null;
+
+      const getCart = () => JSON.parse(localStorage.getItem(cartKey) || "[]");
+      const setCart = (cart) => localStorage.setItem(cartKey, JSON.stringify(cart));
+      const formatRub = (value) => `${Math.max(0, value).toLocaleString("ru-RU")} RUB`;
+      const normalizePhone = (digits10) => `7${digits10}`;
+      const getShippingMethod = () => form.shippingMethod?.value || "";
+      const parsePhoneDigits = (value) => (value || "").replace(/\D/g, "").slice(0, 10);
+      const getSubtotal = () => getCart().reduce((sum, item) => sum + Number(item.numericPrice || 0) * Number(item.qty || 0), 0);
+
+      const showFieldError = (kind, show) => {
+        if (kind === "email") emailError.style.display = show ? "block" : "none";
+        if (kind === "phone") phoneError.style.display = show ? "block" : "none";
+      };
+
+      const setResult = (text) => {
+        checkoutResult.textContent = text || "";
+        checkoutError.textContent = "";
+      };
+
+      const setError = (text) => {
+        checkoutError.textContent = text || "";
+        checkoutResult.textContent = "";
+      };
+
+      const formatPhoneLocal = (digits) => {
+        if (!digits) return "";
+        if (digits.length <= 3) return `(${digits}`;
+        if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+        if (digits.length <= 8) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+      };
+
+      const getShippingCost = () => {
+        const method = getShippingMethod();
+        if (!method || !cityInput.value.trim()) return 0;
+        return SHIPPING_COSTS[method] || 0;
+      };
+
+      const getDiscount = () => {
+        if (!appliedPromo) return 0;
+        const subtotal = getSubtotal();
+        return Math.round((subtotal * appliedPromo.discountPercent) / 100);
+      };
+
+      const rerenderSummary = () => {
+        const subtotal = getSubtotal();
+        const shippingCost = getShippingCost();
+        const discount = getDiscount();
+        const total = Math.max(subtotal + shippingCost - discount, 0);
+        subtotalEl.textContent = formatRub(subtotal);
+        shippingEl.textContent = shippingCost ? formatRub(shippingCost) : "—";
+        discountRow.hidden = discount <= 0;
+        discountEl.textContent = `-${formatRub(discount)}`;
+        totalEl.textContent = formatRub(total);
+      };
+
+      const rerenderOrder = () => {
+        const cart = getCart();
+        if (!cart.length) {
+          orderItemsEl.innerHTML = `<div class="muted">Корзина пуста.</div>`;
+          rerenderSummary();
+          validateForm();
+          return;
+        }
+
+        orderItemsEl.innerHTML = cart.map((item) => {
+          const lineTotal = Number(item.numericPrice || 0) * Number(item.qty || 0);
+          return `<div class="checkout-item" data-item-id="${item.id}" data-item-size="${item.size || ""}">
+            <img src="${item.image}" alt="${item.name}" />
+            <div class="checkout-item-meta">
+              <strong>${item.name}</strong>
+              <span>${formatRub(Number(item.numericPrice || 0))} × ${item.qty}</span>
+              <span><b>${formatRub(lineTotal)}</b></span>
+              <div class="checkout-item-actions">
+                <button type="button" data-action="decrease">−</button>
+                <button type="button" data-action="increase">+</button>
+                <button type="button" data-action="remove">Удалить</button>
+              </div>
+            </div>
+          </div>`;
+        }).join("");
+        rerenderSummary();
+        validateForm();
+      };
+
+      const updateCartItem = (id, size, action) => {
+        const cart = getCart();
+        const item = cart.find((x) => x.id === id && (x.size || "") === (size || ""));
+        if (!item) return;
+        if (action === "increase") item.qty += 1;
+        if (action === "decrease") item.qty -= 1;
+        if (action === "remove" || item.qty <= 0) setCart(cart.filter((x) => !(x.id === id && (x.size || "") === (size || ""))));
+        else setCart(cart);
+        rerenderOrder();
+      };
+
+      const syncCity = () => {
+        const city = cityInput.value.trim();
+        cityPreview.textContent = city ? `Россия, г. ${city}` : "Россия, г. —";
+        const enabled = Boolean(city);
+        shippingRadios.forEach((radio) => {
+          radio.disabled = !enabled;
+          if (!enabled) radio.checked = false;
+        });
+        pvzList.innerHTML = "";
+        (PVZ_BY_CITY[city] || []).forEach((address) => {
+          const option = document.createElement("option");
+          option.value = address;
+          pvzList.appendChild(option);
+        });
+        syncShippingFields();
+      };
+
+      const syncShippingFields = () => {
+        const method = getShippingMethod();
+        const citySelected = Boolean(cityInput.value.trim());
+        pvzFields.hidden = method !== "CDEK_PVZ";
+        courierFields.hidden = method !== "CDEK_COURIER";
+        pvzInput.required = method === "CDEK_PVZ" && citySelected;
+        recipientInput.required = method === "CDEK_COURIER";
+        streetInput.required = method === "CDEK_COURIER";
+        houseInput.required = method === "CDEK_COURIER";
+        rerenderSummary();
+        validateForm();
+      };
+
+      const isValidEmail = () => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((emailInput.value || "").trim());
+      const isValidPhone = () => parsePhoneDigits(phoneInput.value).length === 10;
+
+      const validateForm = () => {
+        const emailOk = isValidEmail();
+        const phoneOk = isValidPhone();
+        const methodOk = Boolean(getShippingMethod()) && Boolean(cityInput.value.trim());
+        const consentOk = consentInput.checked;
+        const cartOk = getCart().length > 0;
+        const requiredFieldsOk = form.checkValidity();
+        submitBtn.disabled = !(emailOk && phoneOk && methodOk && consentOk && cartOk && requiredFieldsOk);
+
+        showFieldError("email", (submitted || touched.email) && !emailOk);
+        showFieldError("phone", (submitted || touched.phone) && !phoneOk);
+      };
+
+      const getShippingPayload = () => {
+        const method = getShippingMethod();
+        const city = cityInput.value.trim();
+        const shipping = {
+          method,
+          city,
+          recipientFullName: recipientInput.value.trim() || "Получатель не указан",
+          shippingCostMinor: getShippingCost() * 100,
+        };
+        if (method === "CDEK_PVZ") {
+          shipping.pvzCode = `PVZ-${city.toUpperCase().slice(0, 4)}`;
+          shipping.pvzAddress = pvzInput.value.trim();
+        } else if (method === "CDEK_COURIER") {
+          shipping.address = { street: streetInput.value.trim(), house: houseInput.value.trim(), apartment: apartmentInput.value.trim() };
+        }
+        return shipping;
+      };
+
+      const applyPromo = async () => {
+        const code = (promoInput.value || "").trim();
+        if (!code) {
+          appliedPromo = null;
+          promoResult.textContent = "";
+          rerenderSummary();
+          return;
+        }
+        try {
+          const subtotalMinor = Math.round(getSubtotal() * 100);
+          const result = await window.apiRequest("/api/v1/checkout/promocodes/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, subtotalMinor }),
+          });
+          appliedPromo = { code: result.code, discountPercent: result.discountPercent };
+          promoResult.textContent = `Промокод ${result.code} применен: -${result.discountPercent}%`;
+          rerenderSummary();
+        } catch (error) {
+          appliedPromo = null;
+          promoResult.textContent = error?.message || "Не удалось применить промокод";
+          rerenderSummary();
+        }
+      };
+
+      document.querySelectorAll("[data-go-back]").forEach((btn) => btn.addEventListener("click", () => {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = "index.html";
+      }));
+
+      orderItemsEl.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+        const row = button.closest("[data-item-id]");
+        updateCartItem(row.dataset.itemId, row.dataset.itemSize, button.dataset.action);
+      });
+
+      cityInput.addEventListener("input", () => { syncCity(); validateForm(); });
+      shippingRadios.forEach((radio) => radio.addEventListener("change", syncShippingFields));
+      [emailInput, recipientInput, pvzInput, streetInput, houseInput, apartmentInput].forEach((el) => el.addEventListener("input", validateForm));
+      consentInput.addEventListener("change", validateForm);
+
+      emailInput.addEventListener("blur", () => { touched.email = true; validateForm(); });
+      phoneInput.addEventListener("blur", () => { touched.phone = true; if (!phoneInput.value) phoneInput.placeholder = "(000) 000-00-00"; validateForm(); });
+
+      phoneInput.addEventListener("focus", () => { phoneInput.placeholder = ""; });
+      phoneInput.addEventListener("input", () => {
+        const digits = parsePhoneDigits(phoneInput.value);
+        phoneInput.value = formatPhoneLocal(digits);
+        validateForm();
+      });
+
+      promoApplyBtn.addEventListener("click", applyPromo);
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submitted = true;
+        validateForm();
+        if (submitBtn.disabled) return;
+
+        const cart = getCart();
+        const items = cart.map((item) => ({ variantId: item.variantId, qty: item.qty || 1 }));
+        const shipping = getShippingPayload();
+        const normalizedPhone = normalizePhone(parsePhoneDigits(phoneInput.value));
+        const customerName = shipping.recipientFullName;
+        const [firstName, ...lastNameParts] = customerName.split(/\s+/);
+        const lastName = lastNameParts.join(" ");
+
+        let wakeupTimer = null;
+        try {
+          submitBtn.disabled = true;
+          setResult("Переходим к оплате…");
+          wakeupTimer = setTimeout(() => setResult("Сервер просыпается, это может занять до минуты…"), 12000);
+          const result = await window.apiRequest("/api/v1/checkout/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerName,
+              customerFirstName: firstName || "",
+              customerLastName: lastName || "",
+              customerEmail: emailInput.value.trim(),
+              customerPhone: normalizedPhone,
+              consentAccepted: true,
+              items,
+              shipping,
+              promoCode: appliedPromo?.code || undefined,
+            }),
+          });
+          clearTimeout(wakeupTimer);
+          localStorage.removeItem(cartKey);
+          if (result.confirmationUrl) {
+            window.location.href = result.confirmationUrl;
+            return;
+          }
+          setResult(`Заказ ${result.orderPublicId} создан.`);
+        } catch (error) {
+          clearTimeout(wakeupTimer);
+          setError(error?.message || "Не удалось оформить заказ.");
+          validateForm();
+        }
+      });
+
+      rerenderOrder();
+      syncCity();
+      validateForm();
+    </script>
+  </body>
+</html>
+

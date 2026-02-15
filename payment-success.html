@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OVERTN — Оплата</title>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <main class="checkout-page">
+      <section class="checkout-card">
+        <h1>Проверяем оплату…</h1>
+        <div class="muted" data-status>Ожидаем подтверждение платежа.</div>
+        <div class="muted" style="margin-top:12px;">
+          Чек будет направлен вам отдельным сообщением после обработки заказа.
+        </div>
+        <div style="margin-top:16px;">
+          <a href="index.html">Вернуться на главную</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script>
+      const statusEl = document.querySelector("[data-status]");
+      const params = new URLSearchParams(window.location.search);
+      const orderPublicId = params.get("order");
+
+      const setStatus = (text) => {
+        if (statusEl) statusEl.textContent = text;
+      };
+
+      const check = async () => {
+        if (!orderPublicId) {
+          setStatus("Не найден номер заказа.");
+          return;
+        }
+
+        try {
+          const order = await window.apiRequest(`/api/v1/checkout/orders/${encodeURIComponent(orderPublicId)}`);
+          if (order?.status === "PAID") {
+            setStatus(`Заказ ${orderPublicId} оплачен. Спасибо!`);
+            return;
+          }
+          if (order?.status === "CANCELLED") {
+            window.location.href = `payment-fail.html?order=${encodeURIComponent(orderPublicId)}`;
+            return;
+          }
+          setStatus(`Статус заказа: ${order?.status || "NEW"}. Обновите страницу через несколько секунд.`);
+        } catch (error) {
+          setStatus(error?.message || "Не удалось проверить статус платежа.");
+        }
+      };
+
+      check();
+    </script>
+  </body>
+  </html>
