@@ -90,27 +90,29 @@
                   <input type="radio" name="shippingMethod" value="COURIER" data-shipping-method disabled />
                   <span>СДЭК — курьером до двери</span>
                 </label>
-                <div class="form-row" data-pvz-fields hidden>
-                  <label>
-                    Пункт получения
-                    <div class="input-shell search-field">
-                      <span>⌕</span>
-                      <input type="text" name="pvzAddress" placeholder="Выберите пункт выдачи" autocomplete="off" data-pvz-address />
-                      <button type="button" class="input-clear" data-pvz-clear aria-label="Очистить">×</button>
+                <div id="pvzFlow" data-pvz-flow hidden>
+                  <div class="form-row" data-pvz-fields hidden>
+                    <label>
+                      Пункт получения
+                      <div class="input-shell search-field">
+                        <span>⌕</span>
+                        <input type="text" name="pvzAddress" placeholder="Выберите пункт выдачи" autocomplete="off" data-pvz-address />
+                        <button type="button" class="input-clear" data-pvz-clear aria-label="Очистить">×</button>
+                      </div>
+                    </label>
+                    <div class="autocomplete" data-pvz-autocomplete hidden>
+                      <div class="autocomplete-list" data-pvz-list></div>
+                      <div class="autocomplete-empty muted" data-pvz-empty hidden>По вашему запросу ничего не найдено</div>
                     </div>
-                  </label>
-                  <div class="autocomplete" data-pvz-autocomplete hidden>
-                    <div class="autocomplete-list" data-pvz-list></div>
-                    <div class="autocomplete-empty muted" data-pvz-empty hidden>По вашему запросу ничего не найдено</div>
+                    <div class="muted form-error" data-pvz-error></div>
                   </div>
-                  <div class="muted form-error" data-pvz-error></div>
+                  <div class="checkout-block pvz-info" data-pvz-info hidden>
+                    <h3>О пункте выдачи</h3>
+                    <div class="muted" data-pvz-info-text></div>
+                    <button type="button" class="pvz-change-link" data-pvz-change>Изменить</button>
+                  </div>
                 </div>
-                <div class="checkout-block pvz-info" data-pvz-info hidden>
-                  <h3>О пункте выдачи</h3>
-                  <div class="muted" data-pvz-info-text></div>
-                  <button type="button" class="change-link" data-pvz-change>Изменить</button>
-                </div>
-                <div class="form-row" data-courier-fields hidden>
+                <div id="courierFlow" class="form-row" data-courier-fields hidden>
                   <div class="form-inline">
                     <label>Улица <input type="text" name="street" data-courier-street /></label>
                   </div>
@@ -191,6 +193,7 @@
       const recipientError = document.querySelector("[data-recipient-error]");
 
       const shippingRadios = Array.from(document.querySelectorAll("[data-shipping-method]"));
+      const pvzFlow = document.querySelector("[data-pvz-flow]");
       const pvzFields = document.querySelector("[data-pvz-fields]");
       const pvzInput = document.querySelector("[data-pvz-address]");
       const pvzClearBtn = document.querySelector("[data-pvz-clear]");
@@ -217,6 +220,7 @@
       let appliedPromo = null;
       let selectedCity = null;
       let selectedPvz = null;
+      let shippingMethod = null;
       let shippingQuote = null;
       let quoteRequestId = 0;
 
@@ -229,7 +233,7 @@
       const setCart = (cart) => localStorage.setItem(cartKey, JSON.stringify(cart));
       const formatRub = (value) => `${Math.max(0, value).toLocaleString("ru-RU")} RUB`;
       const normalizePhone = (digits10) => `7${digits10}`;
-      const getShippingMethod = () => form.shippingMethod?.value || "";
+      const getShippingMethod = () => shippingMethod;
       const parsePhoneDigits = (value) => (value || "").replace(/\D/g, "").slice(0, 10);
       const getSubtotal = () => getCart().reduce((sum, item) => sum + Number(item.numericPrice || 0) * Number(item.qty || 0), 0);
       const getDiscount = () => (appliedPromo ? Math.round((getSubtotal() * appliedPromo.discountPercent) / 100) : 0);
@@ -406,30 +410,105 @@
         if (key === "pvz") pvzDropdown.hidden = true;
       };
 
-      const resetDeliverySelection = () => {
-        shippingRadios.forEach((radio) => { radio.checked = false; });
-        const pvzRadio = shippingRadios.find((radio) => radio.value === "PVZ");
-        if (pvzRadio && selectedCity?.code) pvzRadio.checked = true;
+      const showBlock = (node) => {
+        if (!node) return;
+        node.hidden = false;
+        node.style.display = "";
+      };
 
+      const hideBlock = (node) => {
+        if (!node) return;
+        node.hidden = true;
+        node.style.display = "none";
+      };
+
+      const clearSelectedPvz = () => {
         selectedPvz = null;
         pvzInput.value = "";
-        pvzInfoWrap.hidden = true;
         pvzInfoText.innerHTML = "";
+        showPvzError("");
+        hideAutocomplete("pvz");
+        setInputClearState(pvzInput, pvzClearBtn);
+      };
+
+      const clearCourierFields = () => {
         streetInput.value = "";
         houseInput.value = "";
         flatInput.value = "";
+      };
+
+      const renderPvzFlow = () => {
+        showBlock(pvzFlow);
+        hideBlock(courierFields);
+        if (selectedPvz?.code) {
+          hideBlock(pvzFields);
+          showBlock(pvzInfoWrap);
+        } else {
+          showBlock(pvzFields);
+          hideBlock(pvzInfoWrap);
+        }
+      };
+
+      const hidePvzFlow = () => {
+        hideBlock(pvzFlow);
+        hideBlock(pvzFields);
+        hideBlock(pvzInfoWrap);
+      };
+
+      const renderCourierFlow = () => {
+        hidePvzFlow();
+        showBlock(courierFields);
+      };
+
+      const hideCourierFlow = () => {
+        hideBlock(courierFields);
+      };
+
+      const renderShippingUI = () => {
+        const citySelected = Boolean(selectedCity?.code);
+        shippingMethodsWrap.hidden = !citySelected;
+
+        if (!citySelected) {
+          shippingRadios.forEach((radio) => {
+            radio.checked = false;
+            radio.disabled = true;
+          });
+          shippingMethod = null;
+          hidePvzFlow();
+          hideCourierFlow();
+          return;
+        }
+
+        shippingRadios.forEach((radio) => { radio.disabled = false; });
+        if (!shippingMethod) shippingMethod = "PVZ";
+        shippingRadios.forEach((radio) => { radio.checked = radio.value === shippingMethod; });
+
+        if (shippingMethod === "PVZ") {
+          renderPvzFlow();
+          hideCourierFlow();
+          return;
+        }
+        if (shippingMethod === "COURIER") {
+          renderCourierFlow();
+          hidePvzFlow();
+          return;
+        }
+        hidePvzFlow();
+        hideCourierFlow();
+      };
+
+      const resetDeliverySelection = () => {
+        shippingMethod = selectedCity?.code ? "PVZ" : null;
+        clearSelectedPvz();
+        clearCourierFields();
         shippingQuote = null;
-        setInputClearState(pvzInput, pvzClearBtn);
+        renderShippingUI();
       };
 
       const selectCity = (item) => {
         selectedCity = item;
         cityInput.value = item.label || item.name;
         cityPreview.textContent = `Россия, г. ${item.name}`;
-        shippingMethodsWrap.hidden = false;
-        shippingRadios.forEach((radio) => { radio.disabled = false; });
-        const pvzRadio = shippingRadios.find((radio) => radio.value === "PVZ");
-        if (pvzRadio) pvzRadio.checked = true;
         resetDeliverySelection();
         hideAutocomplete("city");
         showShippingError("");
@@ -441,13 +520,12 @@
       const selectPvz = (item) => {
         selectedPvz = item;
         pvzInput.value = item.label || item.address || item.code;
-        pvzFields.hidden = true;
-        pvzInfoWrap.hidden = false;
         const lines = buildPvzLines(item);
         pvzInfoText.innerHTML = lines.map((line) => `<div>${line}</div>`).join("");
         hideAutocomplete("pvz");
         showPvzError("");
         setInputClearState(pvzInput, pvzClearBtn);
+        renderShippingUI();
         rerenderSummary();
         void requestQuote();
         validateForm();
@@ -555,34 +633,12 @@
 
       const syncShippingFields = () => {
         const citySelected = Boolean(selectedCity?.code);
-        const method = getShippingMethod();
-
-        shippingMethodsWrap.hidden = !citySelected;
-        if (!citySelected) {
-          shippingRadios.forEach((radio) => { radio.disabled = true; radio.checked = false; });
-        }
-
-        const activeMethod = citySelected ? (method || "PVZ") : "";
-        if (citySelected && !method) {
-          const pvzRadio = shippingRadios.find((radio) => radio.value === "PVZ");
-          if (pvzRadio) pvzRadio.checked = true;
-        }
-
-        pvzFields.hidden = activeMethod !== "PVZ" || Boolean(selectedPvz);
-        courierFields.hidden = activeMethod !== "COURIER";
-        pvzInfoWrap.hidden = activeMethod !== "PVZ" || !selectedPvz;
+        const activeMethod = getShippingMethod() || "";
+        renderShippingUI();
 
         pvzInput.required = activeMethod === "PVZ";
         streetInput.required = activeMethod === "COURIER";
         houseInput.required = activeMethod === "COURIER";
-
-        if (activeMethod !== "PVZ") {
-          selectedPvz = null;
-          pvzInput.value = "";
-          pvzInfoWrap.hidden = true;
-          showPvzError("");
-          hideAutocomplete("pvz");
-        }
 
         if (!citySelected || !activeMethod) shippingQuote = null;
         rerenderSummary();
@@ -652,7 +708,7 @@
         const value = normalizeQuery(cityInput.value);
         if (!value) {
           selectedCity = null;
-          shippingMethodsWrap.hidden = true;
+          shippingMethod = null;
           resetDeliverySelection();
           showShippingError("Обязательное поле");
           validateForm();
@@ -676,7 +732,7 @@
           }
           if (mapped.length > 0) {
             selectedCity = null;
-            shippingMethodsWrap.hidden = true;
+            shippingMethod = null;
             resetDeliverySelection();
             showShippingError("Пожалуйста, выберите адрес из предложенных вариантов");
             validateForm();
@@ -685,7 +741,7 @@
         } catch (_error) {}
 
         selectedCity = null;
-        shippingMethodsWrap.hidden = true;
+        shippingMethod = null;
         resetDeliverySelection();
         showShippingError("По вашему запросу ничего не найдено");
         validateForm();
@@ -697,8 +753,9 @@
 
         const value = normalizeQuery(pvzInput.value);
         if (!value) {
-          selectedPvz = null;
+          clearSelectedPvz();
           showPvzError("Обязательное поле");
+          renderShippingUI();
           validateForm();
           return;
         }
@@ -725,17 +782,19 @@
             return;
           }
           if (mapped.length > 0) {
-            selectedPvz = null;
+            clearSelectedPvz();
             shippingQuote = null;
             showPvzError("Пожалуйста, выберите адрес из предложенных вариантов");
+            renderShippingUI();
             validateForm();
             return;
           }
         } catch (_error) {}
 
-        selectedPvz = null;
+        clearSelectedPvz();
         shippingQuote = null;
         showPvzError("По вашему запросу ничего не найдено");
+        renderShippingUI();
         validateForm();
       };
 
@@ -866,7 +925,7 @@
 
       cityInput.addEventListener("input", () => {
         selectedCity = null;
-        shippingMethodsWrap.hidden = true;
+        shippingMethod = null;
         resetDeliverySelection();
         cityPreview.textContent = "Россия, г. —";
         showShippingError("");
@@ -884,12 +943,10 @@
       cityInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("city", event));
 
       pvzInput.addEventListener("input", () => {
-        selectedPvz = null;
+        clearSelectedPvz();
         shippingQuote = null;
-        pvzInfoWrap.hidden = true;
-        showPvzError("");
         loadPvz();
-        setInputClearState(pvzInput, pvzClearBtn);
+        renderShippingUI();
         validateForm();
       });
       pvzInput.addEventListener("focus", loadPvz);
@@ -904,8 +961,8 @@
       cityClearBtn?.addEventListener("click", () => {
         cityInput.value = "";
         selectedCity = null;
+        shippingMethod = null;
         cityPreview.textContent = "Россия, г. —";
-        shippingMethodsWrap.hidden = true;
         resetDeliverySelection();
         hideAutocomplete("city");
         showShippingError("");
@@ -914,26 +971,31 @@
       });
 
       pvzClearBtn?.addEventListener("click", () => {
-        pvzInput.value = "";
-        selectedPvz = null;
-        pvzInfoWrap.hidden = true;
+        clearSelectedPvz();
         shippingQuote = null;
-        showPvzError("");
-        hideAutocomplete("pvz");
-        setInputClearState(pvzInput, pvzClearBtn);
+        renderShippingUI();
         validateForm();
       });
 
       pvzChangeBtn?.addEventListener("click", () => {
-        selectedPvz = null;
+        clearSelectedPvz();
         shippingQuote = null;
-        pvzInfoWrap.hidden = true;
-        pvzFields.hidden = false;
-        pvzInput.focus();
+        renderShippingUI();
         validateForm();
+        pvzInput.focus();
       });
 
-      shippingRadios.forEach((radio) => radio.addEventListener("change", syncShippingFields));
+      shippingRadios.forEach((radio) => radio.addEventListener("change", () => {
+        const prevMethod = shippingMethod;
+        shippingMethod = radio.value;
+        shippingQuote = null;
+        if (shippingMethod === "COURIER") {
+          clearSelectedPvz();
+        } else if (shippingMethod === "PVZ" && prevMethod === "COURIER") {
+          clearCourierFields();
+        }
+        syncShippingFields();
+      }));
       [emailInput, recipientInput, streetInput, houseInput, flatInput].forEach((el) => el.addEventListener("input", () => {
         validateForm();
         if (el === streetInput || el === houseInput || el === flatInput) {
@@ -1010,6 +1072,7 @@
       });
 
       rerenderOrder();
+      renderShippingUI();
       syncShippingFields();
       setInputClearState(cityInput, cityClearBtn);
       setInputClearState(pvzInput, pvzClearBtn);
