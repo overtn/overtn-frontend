@@ -422,9 +422,9 @@
         node.style.display = "none";
       };
 
-      const clearSelectedPvz = () => {
+      const clearSelectedPvz = ({ clearInput = true } = {}) => {
         selectedPvz = null;
-        pvzInput.value = "";
+        if (clearInput) pvzInput.value = "";
         pvzInfoText.innerHTML = "";
         showPvzError("");
         hideAutocomplete("pvz");
@@ -943,7 +943,7 @@
       cityInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("city", event));
 
       pvzInput.addEventListener("input", () => {
-        clearSelectedPvz();
+        clearSelectedPvz({ clearInput: false });
         shippingQuote = null;
         loadPvz();
         renderShippingUI();
