@@ -33,7 +33,7 @@
 
             <div class="form-row">
               <label>Телефон</label>
-              <div class="phone-row">
+              <div class="input-shell phone-row">
                 <span class="phone-prefix">+7</span>
                 <input
                   type="tel"
@@ -66,17 +66,21 @@
               <div class="form-row">
                 <label>
                   Город
-                  <div class="search-field">
+                  <div class="input-shell search-field">
                     <span>⌕</span>
-                    <input type="text" name="city" list="city-list" placeholder="Введите город" required data-city />
+                    <input type="text" name="city" placeholder="Введите город" autocomplete="off" required data-city />
+                    <button type="button" class="input-clear" data-city-clear aria-label="Очистить">×</button>
                   </div>
                 </label>
-                <datalist id="city-list"></datalist>
+                <div class="autocomplete" data-city-autocomplete hidden>
+                  <div class="autocomplete-list" data-city-list></div>
+                  <div class="autocomplete-empty muted" data-city-empty hidden>По вашему запросу ничего не найдено</div>
+                </div>
                 <div class="muted" data-city-preview>Россия, г. —</div>
                 <div class="muted form-error" data-shipping-error></div>
               </div>
 
-              <div class="delivery-options">
+              <div class="delivery-options" data-shipping-methods hidden>
                 <label class="radio-row">
                   <input type="radio" name="shippingMethod" value="PVZ" data-shipping-method disabled />
                   <span>СДЭК — до пункта выдачи</span>
@@ -84,9 +88,21 @@
                 <div class="form-row" data-pvz-fields hidden>
                   <label>
                     Пункт получения
-                    <input type="text" name="pvzAddress" list="pvz-list" placeholder="Выберите пункт выдачи" data-pvz-address />
+                    <div class="input-shell search-field">
+                      <span>⌕</span>
+                      <input type="text" name="pvzAddress" placeholder="Выберите пункт выдачи" autocomplete="off" data-pvz-address />
+                      <button type="button" class="input-clear" data-pvz-clear aria-label="Очистить">×</button>
+                    </div>
                   </label>
-                  <datalist id="pvz-list"></datalist>
+                  <div class="autocomplete" data-pvz-autocomplete hidden>
+                    <div class="autocomplete-list" data-pvz-list></div>
+                    <div class="autocomplete-empty muted" data-pvz-empty hidden>По вашему запросу ничего не найдено</div>
+                  </div>
+                  <div class="muted form-error" data-pvz-error></div>
+                </div>
+                <div class="checkout-block pvz-info" data-pvz-info hidden>
+                  <h3>О пункте выдачи</h3>
+                  <div class="muted" data-pvz-info-text></div>
                 </div>
 
                 <label class="radio-row">
@@ -133,6 +149,7 @@
           <div class="checkout-summary">
             <div><span>Товары</span><strong data-subtotal>0 RUB</strong></div>
             <div><span>Доставка</span><strong data-shipping>—</strong></div>
+            <div class="muted checkout-summary-detail" data-shipping-summary></div>
             <div data-discount-row hidden><span>Скидка</span><strong data-discount>0 RUB</strong></div>
             <div class="checkout-total"><span>Итого</span><strong data-total>0 RUB</strong></div>
           </div>
@@ -147,6 +164,7 @@
       const orderItemsEl = document.querySelector("[data-order-items]");
       const subtotalEl = document.querySelector("[data-subtotal]");
       const shippingEl = document.querySelector("[data-shipping]");
+      const shippingSummaryEl = document.querySelector("[data-shipping-summary]");
       const discountRow = document.querySelector("[data-discount-row]");
       const discountEl = document.querySelector("[data-discount]");
       const totalEl = document.querySelector("[data-total]");
@@ -154,10 +172,14 @@
       const checkoutResult = document.querySelector("[data-checkout-result]");
       const checkoutError = document.querySelector("[data-checkout-error]");
       const cityInput = document.querySelector("[data-city]");
-      const cityList = document.getElementById("city-list");
       const cityPreview = document.querySelector("[data-city-preview]");
+      const cityClearBtn = document.querySelector("[data-city-clear]");
+      const cityDropdown = document.querySelector("[data-city-autocomplete]");
+      const cityList = document.querySelector("[data-city-list]");
+      const cityEmpty = document.querySelector("[data-city-empty]");
       const shippingErrorEl = document.querySelector("[data-shipping-error]");
       const shippingQuoteEl = document.querySelector("[data-shipping-quote]");
+      const shippingMethodsWrap = document.querySelector("[data-shipping-methods]");
       const phoneInput = document.querySelector("[data-phone]");
       const emailInput = document.querySelector("[data-email]");
       const emailError = document.querySelector("[data-email-error]");
@@ -165,7 +187,13 @@
       const shippingRadios = Array.from(document.querySelectorAll("[data-shipping-method]"));
       const pvzFields = document.querySelector("[data-pvz-fields]");
       const pvzInput = document.querySelector("[data-pvz-address]");
-      const pvzList = document.getElementById("pvz-list");
+      const pvzClearBtn = document.querySelector("[data-pvz-clear]");
+      const pvzDropdown = document.querySelector("[data-pvz-autocomplete]");
+      const pvzList = document.querySelector("[data-pvz-list]");
+      const pvzEmpty = document.querySelector("[data-pvz-empty]");
+      const pvzErrorEl = document.querySelector("[data-pvz-error]");
+      const pvzInfoWrap = document.querySelector("[data-pvz-info]");
+      const pvzInfoText = document.querySelector("[data-pvz-info-text]");
       const courierFields = document.querySelector("[data-courier-fields]");
       const recipientInput = document.querySelector("[data-recipient-name]");
       const streetInput = document.querySelector("[data-courier-street]");
@@ -176,15 +204,18 @@
       const promoApplyBtn = document.querySelector("[data-promo-apply]");
       const promoResult = document.querySelector("[data-promo-result]");
 
-      const touched = { email: false, phone: false };
+      const touched = { email: false, phone: false, city: false, pvz: false };
       let submitted = false;
       let appliedPromo = null;
       let selectedCity = null;
       let selectedPvz = null;
       let shippingQuote = null;
-      let cityOptionsByLabel = new Map();
-      let pvzOptionsByLabel = new Map();
       let quoteRequestId = 0;
+
+      const autocompleteState = {
+        city: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0 },
+        pvz: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0 },
+      };
 
       const getCart = () => JSON.parse(localStorage.getItem(cartKey) || "[]");
       const setCart = (cart) => localStorage.setItem(cartKey, JSON.stringify(cart));
@@ -194,8 +225,9 @@
       const parsePhoneDigits = (value) => (value || "").replace(/\D/g, "").slice(0, 10);
       const getSubtotal = () => getCart().reduce((sum, item) => sum + Number(item.numericPrice || 0) * Number(item.qty || 0), 0);
       const getDiscount = () => (appliedPromo ? Math.round((getSubtotal() * appliedPromo.discountPercent) / 100) : 0);
+      const normalizeQuery = (value) => (value || "").trim().replace(/\s+/g, " ");
 
-      const debounce = (fn, wait = 300) => {
+      const debounceWithAbort = (key, fn, wait = 300) => {
         let timer = null;
         return (...args) => {
           clearTimeout(timer);
@@ -208,8 +240,9 @@
         if (kind === "phone") phoneError.style.display = show ? "block" : "none";
       };
 
-      const showShippingError = (message) => {
-        shippingErrorEl.textContent = message || "";
+      const setInputClearState = (input, btn) => {
+        if (!btn) return;
+        btn.classList.toggle("show", Boolean(input.value.trim()));
       };
 
       const setResult = (text) => {
@@ -222,12 +255,37 @@
         checkoutResult.textContent = "";
       };
 
+      const showShippingError = (message) => {
+        shippingErrorEl.textContent = message || "";
+      };
+
+      const showPvzError = (message) => {
+        pvzErrorEl.textContent = message || "";
+      };
+
       const formatPhoneLocal = (digits) => {
         if (!digits) return "";
         if (digits.length <= 3) return `(${digits}`;
         if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
         if (digits.length <= 8) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
         return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
+      };
+
+      const renderShippingSummaryText = () => {
+        if (!selectedCity || !getShippingMethod()) return "";
+        if (getShippingMethod() === "PVZ" && selectedPvz) {
+          return [
+            `ПВЗ ${selectedPvz.code || ""}`.trim(),
+            selectedPvz.address || "",
+            selectedPvz.workTime ? `Время: ${selectedPvz.workTime}` : "",
+            selectedPvz.phone ? `Телефон: ${selectedPvz.phone}` : "",
+          ].filter(Boolean).join("\\n");
+        }
+        if (getShippingMethod() === "COURIER") {
+          const flatPart = flatInput.value.trim() ? `, кв ${flatInput.value.trim()}` : "";
+          return `Курьер: г. ${selectedCity.name}, ${streetInput.value.trim()} ${houseInput.value.trim()}${flatPart}`;
+        }
+        return "";
       };
 
       const rerenderSummary = () => {
@@ -237,6 +295,7 @@
         const total = Math.max(subtotal - discount + shippingCost, 0);
         subtotalEl.textContent = formatRub(subtotal);
         shippingEl.textContent = shippingCost ? formatRub(shippingCost) : "—";
+        shippingSummaryEl.textContent = renderShippingSummaryText();
         discountRow.hidden = discount <= 0;
         discountEl.textContent = `-${formatRub(discount)}`;
         totalEl.textContent = formatRub(total);
@@ -284,85 +343,215 @@
         void requestQuote();
       };
 
-      const fillDatalist = (listEl, rows, mapper) => {
-        listEl.innerHTML = "";
-        const map = new Map();
-        rows.forEach((row) => {
-          const option = document.createElement("option");
-          const label = mapper(row);
-          option.value = label;
-          listEl.appendChild(option);
-          map.set(label, row);
-        });
-        return map;
+      const autoSelectByExactLabel = (items, value) => {
+        const needle = normalizeQuery(value).toLocaleLowerCase("ru-RU");
+        if (!needle) return null;
+        return items.find((item) => {
+          const label = String(item.label || item.name || "").toLocaleLowerCase("ru-RU");
+          return label === needle;
+        }) || null;
       };
 
-      const refreshCitySuggestions = debounce(async () => {
-        const q = cityInput.value.trim();
-        if (q.length < 2) return;
+      const renderAutocomplete = (key) => {
+        const isCity = key === "city";
+        const state = autocompleteState[key];
+        const listEl = isCity ? cityList : pvzList;
+        const emptyEl = isCity ? cityEmpty : pvzEmpty;
+        const dropdownEl = isCity ? cityDropdown : pvzDropdown;
+
+        const visible = state.filtered.slice(0, state.visibleCount);
+        listEl.innerHTML = visible.map((item, index) => `
+          <div class="autocomplete-item ${index === state.activeIndex ? "active" : ""}" data-idx="${index}">
+            <div class="autocomplete-title">${item.title || item.name || item.label || ""}</div>
+            <div class="autocomplete-subtitle">${item.subtitle || item.region || item.country || item.address || ""}</div>
+          </div>
+        `).join("");
+
+        const hasItems = visible.length > 0;
+        dropdownEl.hidden = !hasItems && !emptyEl.hidden;
+        emptyEl.hidden = hasItems || normalizeQuery((isCity ? cityInput.value : pvzInput.value)).length === 0;
+
+        if (hasItems || !emptyEl.hidden) dropdownEl.hidden = false;
+      };
+
+      const hideAutocomplete = (key) => {
+        if (key === "city") cityDropdown.hidden = true;
+        if (key === "pvz") pvzDropdown.hidden = true;
+      };
+
+      const selectCity = (item) => {
+        selectedCity = item;
+        cityInput.value = item.label || item.name;
+        cityPreview.textContent = `Россия, г. ${item.name}`;
+        shippingMethodsWrap.hidden = false;
+        shippingRadios.forEach((radio) => { radio.disabled = false; });
+        hideAutocomplete("city");
+        showShippingError("");
+        resetDeliverySelection();
+        setInputClearState(cityInput, cityClearBtn);
+        validateForm();
+      };
+
+      const selectPvz = (item) => {
+        selectedPvz = item;
+        pvzInput.value = item.label || item.address || item.code;
+        pvzInfoWrap.hidden = false;
+        pvzInfoText.textContent = [
+          `Код: ${item.code || "—"}`,
+          item.city ? `Город: ${item.city}` : "",
+          `Адрес: ${item.address || "—"}`,
+          item.workTime ? `Время работы: ${item.workTime}` : "",
+          item.phone ? `Телефон: ${item.phone}` : "",
+        ].filter(Boolean).join("\\n");
+        hideAutocomplete("pvz");
+        showPvzError("");
+        setInputClearState(pvzInput, pvzClearBtn);
+        rerenderSummary();
+        void requestQuote();
+        validateForm();
+      };
+
+      const setAutocompleteData = (key, rows) => {
+        const state = autocompleteState[key];
+        state.items = rows;
+        state.filtered = rows;
+        state.visibleCount = 20;
+        state.activeIndex = rows.length ? 0 : -1;
+        renderAutocomplete(key);
+      };
+
+      const loadCities = debounceWithAbort("city", async () => {
+        const q = normalizeQuery(cityInput.value);
+        if (q.length < 1) {
+          setAutocompleteData("city", []);
+          hideAutocomplete("city");
+          return;
+        }
+
+        const state = autocompleteState.city;
+        state.requestSeq += 1;
+        const reqId = state.requestSeq;
+        if (state.controller) state.controller.abort();
+        state.controller = new AbortController();
         try {
-          const cities = await window.apiRequest(`/api/v1/shipping/cdek/cities?q=${encodeURIComponent(q)}`);
-          cityOptionsByLabel = fillDatalist(cityList, cities, (row) => row.label || row.name);
-        } catch {
-          cityOptionsByLabel = new Map();
+          const rows = await window.apiRequest(`/api/v1/shipping/cdek/cities?q=${encodeURIComponent(q)}`, { signal: state.controller.signal });
+          if (reqId !== state.requestSeq) return;
+          const mapped = (rows || []).map((row) => ({
+            ...row,
+            title: `г ${row.name}`,
+            subtitle: [row.region, row.country].filter(Boolean).join(", "),
+          }));
+          setAutocompleteData("city", mapped);
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          setAutocompleteData("city", []);
+          hideAutocomplete("city");
+          showShippingError("CDEK temporarily unavailable");
         }
       }, 300);
 
-      const refreshPvzSuggestions = debounce(async () => {
+      const loadPvz = debounceWithAbort("pvz", async () => {
         if (!selectedCity?.code || getShippingMethod() !== "PVZ") return;
-        const q = pvzInput.value.trim();
-        try {
-          const pvzListRows = await window.apiRequest(`/api/v1/shipping/cdek/pvz?cityCode=${encodeURIComponent(selectedCity.code)}&q=${encodeURIComponent(q)}`);
-          pvzOptionsByLabel = fillDatalist(pvzList, pvzListRows, (row) => row.label || row.address || row.code);
-        } catch {
-          pvzOptionsByLabel = new Map();
-        }
-      }, 250);
+        const q = normalizeQuery(pvzInput.value);
 
-      const syncCitySelection = () => {
-        const label = cityInput.value.trim();
-        const city = cityOptionsByLabel.get(label);
-        if (!city) {
-          selectedCity = null;
-          cityPreview.textContent = "Россия, г. —";
-          shippingRadios.forEach((radio) => {
-            radio.checked = false;
-            radio.disabled = true;
-          });
-          shippingQuote = null;
-          showShippingError(submitted ? "Выберите город из списка CDEK." : "");
-        } else {
-          selectedCity = city;
-          cityPreview.textContent = `Россия, г. ${city.name}`;
-          shippingRadios.forEach((radio) => {
-            radio.disabled = false;
-          });
-          showShippingError("");
+        const state = autocompleteState.pvz;
+        state.requestSeq += 1;
+        const reqId = state.requestSeq;
+        if (state.controller) state.controller.abort();
+        state.controller = new AbortController();
+
+        try {
+          const rows = await window.apiRequest(`/api/v1/shipping/cdek/pvz?cityCode=${encodeURIComponent(selectedCity.code)}&q=${encodeURIComponent(q)}&size=200`, { signal: state.controller.signal });
+          if (reqId !== state.requestSeq) return;
+          const mapped = (rows || []).map((row) => ({
+            ...row,
+            label: row.label || [row.name, row.address].filter(Boolean).join(" — "),
+            title: row.name || row.code,
+            subtitle: row.address || row.city || "",
+          }));
+          setAutocompleteData("pvz", mapped);
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+          setAutocompleteData("pvz", []);
+          hideAutocomplete("pvz");
+          showPvzError("CDEK temporarily unavailable");
         }
-        selectedPvz = null;
-        pvzInput.value = "";
-        pvzList.innerHTML = "";
-        syncShippingFields();
+      }, 300);
+
+      const onAutocompleteScroll = (key, event) => {
+        const state = autocompleteState[key];
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.scrollHeight - target.scrollTop - target.clientHeight < 40) {
+          if (state.visibleCount < state.filtered.length) {
+            state.visibleCount += 20;
+            renderAutocomplete(key);
+          }
+        }
       };
 
-      const syncPvzSelection = () => {
-        const label = pvzInput.value.trim();
-        const pvz = pvzOptionsByLabel.get(label);
-        selectedPvz = pvz || null;
+      const handleAutocompleteKeydown = (key, event) => {
+        const state = autocompleteState[key];
+        const max = Math.min(state.filtered.length, state.visibleCount) - 1;
+        if (max < 0) return;
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          state.activeIndex = Math.min(max, state.activeIndex + 1);
+          renderAutocomplete(key);
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          state.activeIndex = Math.max(0, state.activeIndex - 1);
+          renderAutocomplete(key);
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const item = state.filtered[state.activeIndex];
+          if (item) {
+            if (key === "city") selectCity(item);
+            else selectPvz(item);
+          }
+        }
+        if (event.key === "Escape") {
+          hideAutocomplete(key);
+        }
+      };
+
+      const resetDeliverySelection = () => {
+        shippingRadios.forEach((radio) => {
+          radio.checked = false;
+        });
+        selectedPvz = null;
+        pvzInput.value = "";
+        pvzInfoWrap.hidden = true;
+        pvzInfoText.textContent = "";
+        streetInput.value = "";
+        houseInput.value = "";
+        flatInput.value = "";
+        shippingQuote = null;
+        syncShippingFields();
       };
 
       const syncShippingFields = () => {
         const method = getShippingMethod();
+        const citySelected = Boolean(selectedCity?.code);
+        shippingMethodsWrap.hidden = !citySelected;
+
         pvzFields.hidden = method !== "PVZ";
         courierFields.hidden = method !== "COURIER";
+        pvzInfoWrap.hidden = method !== "PVZ" || !selectedPvz;
+
         pvzInput.required = method === "PVZ";
         streetInput.required = method === "COURIER";
         houseInput.required = method === "COURIER";
+
         if (method !== "PVZ") {
           selectedPvz = null;
           pvzInput.value = "";
+          showPvzError("");
         }
-        if (!selectedCity || !method) shippingQuote = null;
+
+        if (!citySelected || !method) shippingQuote = null;
         rerenderSummary();
         validateForm();
         void requestQuote();
@@ -393,7 +582,7 @@
         const payload = buildQuotePayload();
         if (!payload) {
           shippingQuote = null;
-          shippingQuoteEl.textContent = "Выберите город и способ доставки.";
+          shippingQuoteEl.textContent = selectedCity ? "Заполните данные доставки для расчета." : "Выберите город и способ доставки.";
           rerenderSummary();
           validateForm();
           return;
@@ -418,8 +607,8 @@
         } catch (error) {
           if (requestId !== quoteRequestId) return;
           shippingQuote = null;
-          shippingQuoteEl.textContent = "Не удалось рассчитать доставку, попробуйте позже.";
-          showShippingError("Не удалось рассчитать доставку, попробуйте позже.");
+          shippingQuoteEl.textContent = "Не удалось рассчитать доставку. Попробуйте позже.";
+          showShippingError("Не удалось рассчитать доставку. Попробуйте позже.");
           rerenderSummary();
           validateForm();
         }
@@ -434,18 +623,19 @@
         const emailOk = isValidEmail();
         const phoneOk = isValidPhone();
         const cityOk = Boolean(selectedCity?.code);
-        const methodOk = method === "PVZ" || method === "COURIER";
+        const methodOk = cityOk ? (method === "PVZ" || method === "COURIER") : true;
         const pvzOk = method !== "PVZ" || Boolean(selectedPvz?.code);
         const courierOk = method !== "COURIER" || (Boolean(streetInput.value.trim()) && Boolean(houseInput.value.trim()));
         const consentOk = consentInput.checked;
         const recipientOk = isRecipientValid();
         const cartOk = getCart().length > 0;
-        const shippingOk = Boolean(shippingQuote?.shippingCostMinor);
+        const shippingOk = method ? Boolean(shippingQuote?.shippingCostMinor) : false;
         submitBtn.disabled = !(emailOk && phoneOk && cityOk && methodOk && pvzOk && courierOk && consentOk && cartOk && shippingOk && recipientOk);
 
         showFieldError("email", (submitted || touched.email) && !emailOk);
         showFieldError("phone", (submitted || touched.phone) && !phoneOk);
-        if (submitted && !cityOk) showShippingError("Выберите город из списка CDEK.");
+        if ((submitted || touched.city) && !cityOk) showShippingError("Пожалуйста, выберите город из предложенных вариантов");
+        if ((submitted || touched.pvz) && method === "PVZ" && !pvzOk) showPvzError("Пожалуйста, выберите пункт выдачи из предложенных вариантов");
       };
 
       const getShippingPayload = () => {
@@ -511,34 +701,104 @@
         updateCartItem(row.dataset.itemId, row.dataset.itemSize, button.dataset.action);
       });
 
+      cityList.addEventListener("click", (event) => {
+        const itemEl = event.target.closest(".autocomplete-item");
+        if (!itemEl) return;
+        const index = Number(itemEl.dataset.idx);
+        const item = autocompleteState.city.filtered[index];
+        if (item) selectCity(item);
+      });
+
+      pvzList.addEventListener("click", (event) => {
+        const itemEl = event.target.closest(".autocomplete-item");
+        if (!itemEl) return;
+        const index = Number(itemEl.dataset.idx);
+        const item = autocompleteState.pvz.filtered[index];
+        if (item) selectPvz(item);
+      });
+
+      cityList.addEventListener("scroll", (event) => onAutocompleteScroll("city", event));
+      pvzList.addEventListener("scroll", (event) => onAutocompleteScroll("pvz", event));
+
       cityInput.addEventListener("input", () => {
         selectedCity = null;
-        shippingQuote = null;
+        shippingMethodsWrap.hidden = true;
+        resetDeliverySelection();
         cityPreview.textContent = "Россия, г. —";
-        refreshCitySuggestions();
+        loadCities();
+        setInputClearState(cityInput, cityClearBtn);
         validateForm();
       });
+      cityInput.addEventListener("focus", () => { loadCities(); });
       cityInput.addEventListener("blur", () => {
-        syncCitySelection();
-        void requestQuote();
+        touched.city = true;
+        setTimeout(() => {
+          const exact = autoSelectByExactLabel(autocompleteState.city.items, cityInput.value);
+          if (exact) selectCity(exact);
+          else {
+            selectedCity = null;
+            shippingMethodsWrap.hidden = true;
+            resetDeliverySelection();
+            showShippingError("Пожалуйста, выберите город из предложенных вариантов");
+            validateForm();
+          }
+          hideAutocomplete("city");
+        }, 120);
+      });
+      cityInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("city", event));
+
+      cityClearBtn?.addEventListener("click", () => {
+        cityInput.value = "";
+        selectedCity = null;
+        cityPreview.textContent = "Россия, г. —";
+        shippingMethodsWrap.hidden = true;
+        resetDeliverySelection();
+        hideAutocomplete("city");
+        setInputClearState(cityInput, cityClearBtn);
+        validateForm();
       });
 
       pvzInput.addEventListener("input", () => {
         selectedPvz = null;
         shippingQuote = null;
-        refreshPvzSuggestions();
+        pvzInfoWrap.hidden = true;
+        showPvzError("");
+        loadPvz();
+        setInputClearState(pvzInput, pvzClearBtn);
         validateForm();
       });
+      pvzInput.addEventListener("focus", () => { loadPvz(); });
       pvzInput.addEventListener("blur", () => {
-        syncPvzSelection();
-        void requestQuote();
+        touched.pvz = true;
+        setTimeout(() => {
+          const exact = autoSelectByExactLabel(autocompleteState.pvz.items, pvzInput.value);
+          if (exact) selectPvz(exact);
+          else if (getShippingMethod() === "PVZ") {
+            selectedPvz = null;
+            showPvzError("Пожалуйста, выберите пункт выдачи из предложенных вариантов");
+            validateForm();
+          }
+          hideAutocomplete("pvz");
+        }, 120);
+      });
+      pvzInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("pvz", event));
+
+      pvzClearBtn?.addEventListener("click", () => {
+        pvzInput.value = "";
+        selectedPvz = null;
+        pvzInfoWrap.hidden = true;
+        shippingQuote = null;
+        hideAutocomplete("pvz");
+        setInputClearState(pvzInput, pvzClearBtn);
+        validateForm();
       });
 
       shippingRadios.forEach((radio) => radio.addEventListener("change", syncShippingFields));
       [emailInput, recipientInput, streetInput, houseInput, flatInput].forEach((el) => el.addEventListener("input", () => {
         validateForm();
-        if (el === streetInput || el === houseInput || el === flatInput || el === recipientInput) {
+        if (el === streetInput || el === houseInput || el === flatInput) {
           void requestQuote();
+          rerenderSummary();
         }
       }));
       consentInput.addEventListener("change", validateForm);
@@ -554,6 +814,11 @@
       });
 
       promoApplyBtn.addEventListener("click", applyPromo);
+
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest("[data-city]") && !event.target.closest("[data-city-autocomplete]")) hideAutocomplete("city");
+        if (!event.target.closest("[data-pvz-address]") && !event.target.closest("[data-pvz-autocomplete]")) hideAutocomplete("pvz");
+      });
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -605,6 +870,8 @@
 
       rerenderOrder();
       syncShippingFields();
+      setInputClearState(cityInput, cityClearBtn);
+      setInputClearState(pvzInput, pvzClearBtn);
       validateForm();
     </script>
   </body>
