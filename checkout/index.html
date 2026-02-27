@@ -86,6 +86,10 @@
                   <input type="radio" name="shippingMethod" value="PVZ" data-shipping-method disabled />
                   <span>СДЭК — до пункта выдачи</span>
                 </label>
+                <label class="radio-row">
+                  <input type="radio" name="shippingMethod" value="COURIER" data-shipping-method disabled />
+                  <span>СДЭК — курьером до двери</span>
+                </label>
                 <div class="form-row" data-pvz-fields hidden>
                   <label>
                     Пункт получения
@@ -106,11 +110,6 @@
                   <div class="muted" data-pvz-info-text></div>
                   <button type="button" class="change-link" data-pvz-change>Изменить</button>
                 </div>
-
-                <label class="radio-row">
-                  <input type="radio" name="shippingMethod" value="COURIER" data-shipping-method disabled />
-                  <span>СДЭК — курьером до двери</span>
-                </label>
                 <div class="form-row" data-courier-fields hidden>
                   <div class="form-inline">
                     <label>Улица <input type="text" name="street" data-courier-street /></label>
@@ -563,6 +562,7 @@
           pvzInput.value = "";
           pvzInfoWrap.hidden = true;
           showPvzError("");
+          hideAutocomplete("pvz");
         }
 
         if (!citySelected || !activeMethod) shippingQuote = null;
@@ -655,6 +655,14 @@
             selectCity(exactRemote);
             return;
           }
+          if (mapped.length > 0) {
+            selectedCity = null;
+            shippingMethodsWrap.hidden = true;
+            resetDeliverySelection();
+            showShippingError("Пожалуйста, выберите адрес из предложенных вариантов");
+            validateForm();
+            return;
+          }
         } catch (_error) {}
 
         selectedCity = null;
@@ -697,6 +705,13 @@
             selectPvz(exactRemote);
             return;
           }
+          if (mapped.length > 0) {
+            selectedPvz = null;
+            shippingQuote = null;
+            showPvzError("Пожалуйста, выберите адрес из предложенных вариантов");
+            validateForm();
+            return;
+          }
         } catch (_error) {}
 
         selectedPvz = null;
@@ -735,13 +750,13 @@
         if (submitted || touched.city) {
           const cityValue = normalizeQuery(cityInput.value);
           if (!cityValue) showShippingError("Обязательное поле");
-          else if (!cityOk) showShippingError("По вашему запросу ничего не найдено");
+          else if (!cityOk && !shippingErrorEl.textContent) showShippingError("Пожалуйста, выберите адрес из предложенных вариантов");
         }
 
         if ((submitted || touched.pvz) && method === "PVZ") {
           const pvzValue = normalizeQuery(pvzInput.value);
           if (!pvzValue && !selectedPvz) showPvzError("Обязательное поле");
-          else if (!pvzOk) showPvzError("По вашему запросу ничего не найдено");
+          else if (!pvzOk && !pvzErrorEl.textContent) showPvzError("Пожалуйста, выберите адрес из предложенных вариантов");
         }
       };
 

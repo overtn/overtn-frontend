@@ -467,7 +467,7 @@ a {
   transition: filter 0.2s ease, opacity 0.2s ease;
   position: absolute;
   left: 50%;
-  bottom: 66px;
+  bottom: 69px;
   transform: translateX(-50%);
   z-index: 1;
 }
@@ -1157,9 +1157,10 @@ a {
 }
 
 .checkout-summary-detail {
+  display: block !important;
+  justify-content: initial !important;
   margin-top: -4px;
   line-height: 1.35;
-  white-space: pre-line;
   font-size: 12px;
 }
 
@@ -1298,6 +1299,8 @@ a {
 .change-link {
   margin-top: 2px;
   align-self: flex-start;
+  display: inline-block;
+  width: auto;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -1350,7 +1353,7 @@ a {
   .footer-logo {
     width: min(340px, 64vw);
     left: 50%;
-    bottom: 56px;
+    bottom: 59px;
     transform: translateX(-50%);
   }
 
