@@ -261,10 +261,29 @@
         return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 10)}`;
       };
 
+      const getPvzAddressHead = (pvz, cityName) => {
+        const clean = (value) => String(value || "").replace(/\\n/g, " ").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
+        const baseAddress = clean(
+          pvz.addressShort
+          || pvz.address_short
+          || pvz.street
+          || pvz.location?.address
+          || pvz.address
+          || ""
+        );
+        if (!baseAddress) return "";
+        const city = clean(cityName || pvz.city || "");
+        if (!city) return baseAddress;
+        const escapedCity = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const withoutCityPrefix = baseAddress.replace(new RegExp(`^${escapedCity}\\s*,\\s*`, "i"), "");
+        return withoutCityPrefix;
+      };
+
       const buildPvzLines = (pvz) => {
         if (!pvz) return [];
         const clean = (value) => String(value || "").replace(/\\n/g, " ").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
-        const first = [pvz.code, pvz.city, pvz.name || pvz.address].filter(Boolean).join(", ");
+        const cityName = clean(selectedCity?.name || pvz.city || "");
+        const first = [clean(pvz.code), cityName, getPvzAddressHead(pvz, cityName)].filter(Boolean).join(", ");
         return [
           clean(first),
           pvz.address ? `Адрес: ${clean(pvz.address)}` : "",
@@ -597,7 +616,7 @@
         const payload = buildQuotePayload();
         if (!payload) {
           shippingQuote = null;
-          shippingQuoteEl.textContent = selectedCity ? "Заполните данные доставки для расчета." : "Выберите город и способ доставки.";
+          shippingQuoteEl.textContent = !selectedCity ? "Выберите город и способ доставки." : "";
           rerenderSummary();
           validateForm();
           return;
@@ -757,6 +776,12 @@
           const pvzValue = normalizeQuery(pvzInput.value);
           if (!pvzValue && !selectedPvz) showPvzError("Обязательное поле");
           else if (!pvzOk && !pvzErrorEl.textContent) showPvzError("Пожалуйста, выберите адрес из предложенных вариантов");
+        }
+
+        if (submitted && !shippingOk && cityOk && methodOk) {
+          showShippingError("Заполните данные доставки для расчета.");
+        } else if (shippingErrorEl.textContent === "Заполните данные доставки для расчета." && (shippingOk || !submitted)) {
+          showShippingError("");
         }
       };
 
