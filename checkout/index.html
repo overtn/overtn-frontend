@@ -114,7 +114,19 @@
                 </div>
                 <div id="courierFlow" class="form-row" data-courier-fields hidden>
                   <div class="form-inline">
-                    <label>Улица <input type="text" name="street" data-courier-street /></label>
+                    <label>
+                      Улица
+                      <div class="input-shell search-field">
+                        <span>⌕</span>
+                        <input type="text" name="street" autocomplete="off" data-courier-street />
+                        <button type="button" class="input-clear" data-street-clear aria-label="Очистить">×</button>
+                      </div>
+                    </label>
+                    <div class="autocomplete" data-street-autocomplete hidden>
+                      <div class="autocomplete-list" data-street-list></div>
+                      <div class="autocomplete-empty muted" data-street-empty hidden>По вашему запросу ничего не найдено</div>
+                    </div>
+                    <div class="muted" data-street-hint hidden>Подсказки временно недоступны, введите адрес вручную</div>
                   </div>
                   <div class="form-inline two-cols">
                     <label>Дом <input type="text" name="house" data-courier-house /></label>
@@ -207,6 +219,11 @@
 
       const courierFields = document.querySelector("[data-courier-fields]");
       const streetInput = document.querySelector("[data-courier-street]");
+      const streetClearBtn = document.querySelector("[data-street-clear]");
+      const streetDropdown = document.querySelector("[data-street-autocomplete]");
+      const streetList = document.querySelector("[data-street-list]");
+      const streetEmpty = document.querySelector("[data-street-empty]");
+      const streetHint = document.querySelector("[data-street-hint]");
       const houseInput = document.querySelector("[data-courier-house]");
       const flatInput = document.querySelector("[data-courier-flat]");
 
@@ -220,6 +237,7 @@
       let appliedPromo = null;
       let selectedCity = null;
       let selectedPvz = null;
+      let selectedCourierSuggestion = null;
       let shippingMethod = null;
       let shippingQuote = null;
       let quoteRequestId = 0;
@@ -227,6 +245,7 @@
       const state = {
         city: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null },
         pvz: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null },
+        street: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null, disabled: false },
       };
 
       const getCart = () => JSON.parse(localStorage.getItem(cartKey) || "[]");
@@ -385,12 +404,19 @@
         subtitle: row.address || row.city || "",
       }));
 
+      const mapStreetRows = (rows) => (rows || []).map((row) => ({
+        ...row,
+        title: row.value || [row.street, row.house].filter(Boolean).join(", "),
+        subtitle: [row.street, row.house ? `дом ${row.house}` : ""].filter(Boolean).join(", "),
+      }));
+
       const renderAutocomplete = (key) => {
         const isCity = key === "city";
+        const isStreet = key === "street";
         const st = state[key];
-        const listEl = isCity ? cityList : pvzList;
-        const emptyEl = isCity ? cityEmpty : pvzEmpty;
-        const dropdownEl = isCity ? cityDropdown : pvzDropdown;
+        const listEl = isCity ? cityList : (isStreet ? streetList : pvzList);
+        const emptyEl = isCity ? cityEmpty : (isStreet ? streetEmpty : pvzEmpty);
+        const dropdownEl = isCity ? cityDropdown : (isStreet ? streetDropdown : pvzDropdown);
         const visible = st.filtered.slice(0, st.visibleCount);
 
         listEl.innerHTML = visible.map((item, index) => `
@@ -401,13 +427,15 @@
         `).join("");
 
         const hasItems = visible.length > 0;
-        emptyEl.hidden = hasItems || normalizeQuery((isCity ? cityInput.value : pvzInput.value)).length === 0;
+        const sourceValue = isCity ? cityInput.value : (isStreet ? streetInput.value : pvzInput.value);
+        emptyEl.hidden = hasItems || normalizeQuery(sourceValue).length === 0;
         dropdownEl.hidden = !hasItems && emptyEl.hidden;
       };
 
       const hideAutocomplete = (key) => {
         if (key === "city") cityDropdown.hidden = true;
         if (key === "pvz") pvzDropdown.hidden = true;
+        if (key === "street") streetDropdown.hidden = true;
       };
 
       const showBlock = (node) => {
@@ -435,11 +463,20 @@
         streetInput.value = "";
         houseInput.value = "";
         flatInput.value = "";
+        selectedCourierSuggestion = null;
+        state.street.disabled = false;
+        state.street.items = [];
+        state.street.filtered = [];
+        streetHint.hidden = true;
+        hideAutocomplete("street");
+        setInputClearState(streetInput, streetClearBtn);
       };
 
       const renderPvzFlow = () => {
         showBlock(pvzFlow);
         hideBlock(courierFields);
+        hideAutocomplete("street");
+        streetHint.hidden = true;
         if (selectedPvz?.code) {
           hideBlock(pvzFields);
           showBlock(pvzInfoWrap);
@@ -462,6 +499,8 @@
 
       const hideCourierFlow = () => {
         hideBlock(courierFields);
+        hideAutocomplete("street");
+        streetHint.hidden = true;
       };
 
       const renderShippingUI = () => {
@@ -596,6 +635,56 @@
             showPvzError("CDEK temporarily unavailable");
           }
         }, 300);
+      };
+
+      const selectStreetSuggestion = (item) => {
+        selectedCourierSuggestion = item;
+        streetInput.value = item.street || item.value || "";
+        if (item.house) houseInput.value = item.house;
+        hideAutocomplete("street");
+        streetHint.hidden = true;
+        setInputClearState(streetInput, streetClearBtn);
+        rerenderSummary();
+        void requestQuote();
+        validateForm();
+      };
+
+      const loadStreetSuggestions = () => {
+        if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.street.disabled) return;
+        const q = normalizeQuery(streetInput.value);
+        if (!q) {
+          setAutocompleteData("street", []);
+          hideAutocomplete("street");
+          return;
+        }
+
+        scheduleLookup("street", async () => {
+          const st = state.street;
+          st.requestSeq += 1;
+          const requestId = st.requestSeq;
+          if (st.controller) st.controller.abort();
+          st.controller = new AbortController();
+          try {
+            const result = await window.apiRequest(`/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}`, { signal: st.controller.signal });
+            if (requestId !== st.requestSeq) return;
+            const rows = Array.isArray(result) ? result : (result.items || []);
+            const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
+            if (meta.disabled) {
+              st.disabled = true;
+              streetHint.hidden = false;
+              setAutocompleteData("street", []);
+              hideAutocomplete("street");
+              return;
+            }
+            streetHint.hidden = true;
+            setAutocompleteData("street", mapStreetRows(rows));
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+            streetHint.hidden = false;
+            setAutocompleteData("street", []);
+            hideAutocomplete("street");
+          }
+        }, 320);
       };
 
       const onAutocompleteScroll = (key, event) => {
@@ -865,6 +954,17 @@
             street: streetInput.value.trim(),
             house: houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
+            suggestion: selectedCourierSuggestion
+              ? {
+                value: selectedCourierSuggestion.value,
+                street: selectedCourierSuggestion.street,
+                house: selectedCourierSuggestion.house,
+                block: selectedCourierSuggestion.block,
+                geo: selectedCourierSuggestion.geo,
+                fiasId: selectedCourierSuggestion.fiasId,
+                postalCode: selectedCourierSuggestion.postalCode,
+              }
+              : undefined,
           };
         }
         return payload;
@@ -919,9 +1019,16 @@
         const item = state.pvz.filtered[Number(itemEl.dataset.idx)];
         if (item) selectPvz(item);
       });
+      streetList.addEventListener("click", (event) => {
+        const itemEl = event.target.closest(".autocomplete-item");
+        if (!itemEl) return;
+        const item = state.street.filtered[Number(itemEl.dataset.idx)];
+        if (item) selectStreetSuggestion(item);
+      });
 
       cityList.addEventListener("scroll", (event) => onAutocompleteScroll("city", event));
       pvzList.addEventListener("scroll", (event) => onAutocompleteScroll("pvz", event));
+      streetList.addEventListener("scroll", (event) => onAutocompleteScroll("street", event));
 
       cityInput.addEventListener("input", () => {
         selectedCity = null;
@@ -958,6 +1065,18 @@
       });
       pvzInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("pvz", event));
 
+      streetInput.addEventListener("input", () => {
+        selectedCourierSuggestion = null;
+        shippingQuote = null;
+        state.street.disabled = false;
+        streetHint.hidden = true;
+        loadStreetSuggestions();
+        setInputClearState(streetInput, streetClearBtn);
+        validateForm();
+      });
+      streetInput.addEventListener("focus", loadStreetSuggestions);
+      streetInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("street", event));
+
       cityClearBtn?.addEventListener("click", () => {
         cityInput.value = "";
         selectedCity = null;
@@ -974,6 +1093,16 @@
         clearSelectedPvz();
         shippingQuote = null;
         renderShippingUI();
+        validateForm();
+      });
+      streetClearBtn?.addEventListener("click", () => {
+        streetInput.value = "";
+        selectedCourierSuggestion = null;
+        state.street.disabled = false;
+        streetHint.hidden = true;
+        hideAutocomplete("street");
+        setInputClearState(streetInput, streetClearBtn);
+        shippingQuote = null;
         validateForm();
       });
 
@@ -1021,6 +1150,7 @@
       document.addEventListener("click", (event) => {
         if (!event.target.closest("[data-city]") && !event.target.closest("[data-city-autocomplete]")) hideAutocomplete("city");
         if (!event.target.closest("[data-pvz-address]") && !event.target.closest("[data-pvz-autocomplete]")) hideAutocomplete("pvz");
+        if (!event.target.closest("[data-courier-street]") && !event.target.closest("[data-street-autocomplete]")) hideAutocomplete("street");
       });
 
       form.addEventListener("submit", async (event) => {
