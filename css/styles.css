@@ -1050,6 +1050,17 @@ a {
   padding: 0 12px;
 }
 
+.search-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 17px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
 .search-field input {
   border: none;
   outline: none;
@@ -1072,6 +1083,11 @@ a {
 
 .form-inline.two-cols {
   grid-template-columns: 1fr 1fr;
+}
+
+.field-stack {
+  display: grid;
+  gap: 10px;
 }
 
 .promo-row {

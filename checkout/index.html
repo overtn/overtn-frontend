@@ -68,7 +68,7 @@
                 <label>
                   Город
                   <div class="input-shell search-field">
-                    <span>⌕</span>
+                    <span class="search-icon">⌕</span>
                     <input type="text" name="city" placeholder="Введите город" autocomplete="off" required data-city />
                     <button type="button" class="input-clear" data-city-clear aria-label="Очистить">×</button>
                   </div>
@@ -95,7 +95,7 @@
                     <label>
                       Пункт получения
                       <div class="input-shell search-field">
-                        <span>⌕</span>
+                        <span class="search-icon">⌕</span>
                         <input type="text" name="pvzAddress" placeholder="Выберите пункт выдачи" autocomplete="off" data-pvz-address />
                         <button type="button" class="input-clear" data-pvz-clear aria-label="Очистить">×</button>
                       </div>
@@ -117,7 +117,7 @@
                     <label>
                       Улица
                       <div class="input-shell search-field">
-                        <span>⌕</span>
+                        <span class="search-icon">⌕</span>
                         <input type="text" name="street" autocomplete="off" data-courier-street />
                         <button type="button" class="input-clear" data-street-clear aria-label="Очистить">×</button>
                       </div>
@@ -127,9 +127,25 @@
                       <div class="autocomplete-empty muted" data-street-empty hidden>По вашему запросу ничего не найдено</div>
                     </div>
                     <div class="muted" data-street-hint hidden>Подсказки временно недоступны, введите адрес вручную</div>
+                    <div class="muted" data-house-deps-hint hidden>Сначала выберите улицу из списка.</div>
+                    <div class="muted form-error" data-street-error></div>
                   </div>
                   <div class="form-inline two-cols">
-                    <label>Дом <input type="text" name="house" data-courier-house /></label>
+                    <div class="field-stack">
+                      <label>
+                        Дом
+                        <div class="input-shell search-field">
+                          <span class="search-icon">⌕</span>
+                          <input type="text" name="house" autocomplete="off" data-courier-house />
+                          <button type="button" class="input-clear" data-house-clear aria-label="Очистить">×</button>
+                        </div>
+                      </label>
+                      <div class="autocomplete" data-house-autocomplete hidden>
+                        <div class="autocomplete-list" data-house-list></div>
+                        <div class="autocomplete-empty muted" data-house-empty hidden>По вашему запросу ничего не найдено</div>
+                      </div>
+                      <div class="muted form-error" data-house-error></div>
+                    </div>
                     <label>Квартира/Офис <input type="text" name="flat" data-courier-flat /></label>
                   </div>
                 </div>
@@ -224,7 +240,14 @@
       const streetList = document.querySelector("[data-street-list]");
       const streetEmpty = document.querySelector("[data-street-empty]");
       const streetHint = document.querySelector("[data-street-hint]");
+      const houseDepsHint = document.querySelector("[data-house-deps-hint]");
+      const streetErrorEl = document.querySelector("[data-street-error]");
       const houseInput = document.querySelector("[data-courier-house]");
+      const houseClearBtn = document.querySelector("[data-house-clear]");
+      const houseDropdown = document.querySelector("[data-house-autocomplete]");
+      const houseList = document.querySelector("[data-house-list]");
+      const houseEmpty = document.querySelector("[data-house-empty]");
+      const houseErrorEl = document.querySelector("[data-house-error]");
       const flatInput = document.querySelector("[data-courier-flat]");
 
       const consentInput = document.querySelector("[data-consent]");
@@ -232,12 +255,21 @@
       const promoApplyBtn = document.querySelector("[data-promo-apply]");
       const promoResult = document.querySelector("[data-promo-result]");
 
-      const touched = { email: false, phone: false, city: false, pvz: false, recipient: false };
+      const touched = {
+        email: false,
+        phone: false,
+        city: false,
+        pvz: false,
+        recipient: false,
+        street: false,
+        house: false,
+      };
       let submitted = false;
       let appliedPromo = null;
       let selectedCity = null;
       let selectedPvz = null;
       let selectedCourierSuggestion = null;
+      let selectedHouseSuggestion = null;
       let shippingMethod = null;
       let shippingQuote = null;
       let quoteRequestId = 0;
@@ -246,6 +278,7 @@
         city: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null },
         pvz: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null },
         street: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null, disabled: false },
+        house: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null, disabled: false },
       };
 
       const getCart = () => JSON.parse(localStorage.getItem(cartKey) || "[]");
@@ -265,6 +298,8 @@
       const showRecipientError = (show) => { recipientError.style.display = show ? "block" : "none"; };
       const showShippingError = (message) => { shippingErrorEl.textContent = message || ""; };
       const showPvzError = (message) => { pvzErrorEl.textContent = message || ""; };
+      const showStreetError = (message) => { streetErrorEl.textContent = message || ""; };
+      const showHouseError = (message) => { houseErrorEl.textContent = message || ""; };
       const setInputClearState = (input, btn) => { btn?.classList.toggle("show", Boolean(input.value.trim())); };
 
       const setResult = (text) => {
@@ -391,11 +426,13 @@
         }) || null;
       };
 
-      const mapCityRows = (rows) => (rows || []).map((row) => ({
-        ...row,
-        title: `г ${row.name}`,
-        subtitle: [row.region, row.country].filter(Boolean).join(", "),
-      }));
+      const mapCityRows = (rows) => (rows || [])
+        .filter((row) => !row.country || String(row.country).toLowerCase().includes("рос"))
+        .map((row) => ({
+          ...row,
+          title: `г ${row.name}`,
+          subtitle: [row.region, row.country || "Россия"].filter(Boolean).join(", "),
+        }));
 
       const mapPvzRows = (rows) => (rows || []).map((row) => ({
         ...row,
@@ -410,13 +447,20 @@
         subtitle: [row.street, row.house ? `дом ${row.house}` : ""].filter(Boolean).join(", "),
       }));
 
+      const mapHouseRows = (rows) => (rows || []).map((row) => ({
+        ...row,
+        title: row.house ? `дом ${row.house}${row.block ? `, ${row.block}` : ""}` : row.value,
+        subtitle: row.value || "",
+      }));
+
       const renderAutocomplete = (key) => {
         const isCity = key === "city";
         const isStreet = key === "street";
+        const isHouse = key === "house";
         const st = state[key];
-        const listEl = isCity ? cityList : (isStreet ? streetList : pvzList);
-        const emptyEl = isCity ? cityEmpty : (isStreet ? streetEmpty : pvzEmpty);
-        const dropdownEl = isCity ? cityDropdown : (isStreet ? streetDropdown : pvzDropdown);
+        const listEl = isCity ? cityList : (isStreet ? streetList : (isHouse ? houseList : pvzList));
+        const emptyEl = isCity ? cityEmpty : (isStreet ? streetEmpty : (isHouse ? houseEmpty : pvzEmpty));
+        const dropdownEl = isCity ? cityDropdown : (isStreet ? streetDropdown : (isHouse ? houseDropdown : pvzDropdown));
         const visible = st.filtered.slice(0, st.visibleCount);
 
         listEl.innerHTML = visible.map((item, index) => `
@@ -427,7 +471,7 @@
         `).join("");
 
         const hasItems = visible.length > 0;
-        const sourceValue = isCity ? cityInput.value : (isStreet ? streetInput.value : pvzInput.value);
+        const sourceValue = isCity ? cityInput.value : (isStreet ? streetInput.value : (isHouse ? houseInput.value : pvzInput.value));
         emptyEl.hidden = hasItems || normalizeQuery(sourceValue).length === 0;
         dropdownEl.hidden = !hasItems && emptyEl.hidden;
       };
@@ -436,6 +480,7 @@
         if (key === "city") cityDropdown.hidden = true;
         if (key === "pvz") pvzDropdown.hidden = true;
         if (key === "street") streetDropdown.hidden = true;
+        if (key === "house") houseDropdown.hidden = true;
       };
 
       const showBlock = (node) => {
@@ -464,12 +509,21 @@
         houseInput.value = "";
         flatInput.value = "";
         selectedCourierSuggestion = null;
+        selectedHouseSuggestion = null;
         state.street.disabled = false;
         state.street.items = [];
         state.street.filtered = [];
+        state.house.disabled = true;
+        state.house.items = [];
+        state.house.filtered = [];
         streetHint.hidden = true;
+        houseDepsHint.hidden = false;
+        showStreetError("");
+        showHouseError("");
         hideAutocomplete("street");
+        hideAutocomplete("house");
         setInputClearState(streetInput, streetClearBtn);
+        setInputClearState(houseInput, houseClearBtn);
       };
 
       const renderPvzFlow = () => {
@@ -495,6 +549,7 @@
       const renderCourierFlow = () => {
         hidePvzFlow();
         showBlock(courierFields);
+        houseDepsHint.hidden = Boolean(selectedCourierSuggestion) || state.street.disabled;
       };
 
       const hideCourierFlow = () => {
@@ -545,6 +600,14 @@
       };
 
       const selectCity = (item) => {
+        if (item.country && !String(item.country).toLowerCase().includes("рос")) {
+          selectedCity = null;
+          shippingMethod = null;
+          resetDeliverySelection();
+          showShippingError("Доставка доступна только по России.");
+          validateForm();
+          return;
+        }
         selectedCity = item;
         cityInput.value = item.label || item.name;
         cityPreview.textContent = `Россия, г. ${item.name}`;
@@ -639,13 +702,18 @@
 
       const selectStreetSuggestion = (item) => {
         selectedCourierSuggestion = item;
+        selectedHouseSuggestion = null;
         streetInput.value = item.street || item.value || "";
-        if (item.house) houseInput.value = item.house;
+        houseInput.value = "";
+        state.house.disabled = false;
+        houseDepsHint.hidden = true;
+        showStreetError("");
+        showHouseError("");
         hideAutocomplete("street");
         streetHint.hidden = true;
         setInputClearState(streetInput, streetClearBtn);
+        setInputClearState(houseInput, houseClearBtn);
         rerenderSummary();
-        void requestQuote();
         validateForm();
       };
 
@@ -665,24 +733,82 @@
           if (st.controller) st.controller.abort();
           st.controller = new AbortController();
           try {
-            const result = await window.apiRequest(`/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}`, { signal: st.controller.signal });
+            const result = await window.apiRequest(`/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&mode=street`, { signal: st.controller.signal });
             if (requestId !== st.requestSeq) return;
             const rows = Array.isArray(result) ? result : (result.items || []);
             const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
             if (meta.disabled) {
               st.disabled = true;
+              state.house.disabled = true;
               streetHint.hidden = false;
+              houseDepsHint.hidden = true;
               setAutocompleteData("street", []);
               hideAutocomplete("street");
               return;
             }
+            st.disabled = false;
             streetHint.hidden = true;
             setAutocompleteData("street", mapStreetRows(rows));
           } catch (error) {
             if (error?.name === "AbortError") return;
             streetHint.hidden = false;
+            state.house.disabled = true;
             setAutocompleteData("street", []);
             hideAutocomplete("street");
+          }
+        }, 320);
+      };
+
+      const selectHouseSuggestion = (item) => {
+        selectedHouseSuggestion = item;
+        houseInput.value = item.house || item.value || "";
+        showHouseError("");
+        hideAutocomplete("house");
+        setInputClearState(houseInput, houseClearBtn);
+        rerenderSummary();
+        void requestQuote();
+        validateForm();
+      };
+
+      const loadHouseSuggestions = () => {
+        if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.house.disabled) return;
+        if (!selectedCourierSuggestion?.street) {
+          houseDepsHint.hidden = false;
+          return;
+        }
+        const q = normalizeQuery(houseInput.value);
+        if (!q) {
+          setAutocompleteData("house", []);
+          hideAutocomplete("house");
+          return;
+        }
+
+        scheduleLookup("house", async () => {
+          const st = state.house;
+          st.requestSeq += 1;
+          const requestId = st.requestSeq;
+          if (st.controller) st.controller.abort();
+          st.controller = new AbortController();
+          try {
+            const result = await window.apiRequest(
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(selectedCourierSuggestion.street || selectedCourierSuggestion.value || "")}&mode=house`,
+              { signal: st.controller.signal },
+            );
+            if (requestId !== st.requestSeq) return;
+            const rows = Array.isArray(result) ? result : (result.items || []);
+            const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
+            if (meta.disabled) {
+              state.house.disabled = true;
+              setAutocompleteData("house", []);
+              hideAutocomplete("house");
+              return;
+            }
+            state.house.disabled = false;
+            setAutocompleteData("house", mapHouseRows(rows));
+          } catch (error) {
+            if (error?.name === "AbortError") return;
+            setAutocompleteData("house", []);
+            hideAutocomplete("house");
           }
         }, 320);
       };
@@ -715,7 +841,12 @@
         if (event.key === "Enter") {
           event.preventDefault();
           const item = st.filtered[st.activeIndex];
-          if (item) key === "city" ? selectCity(item) : selectPvz(item);
+          if (item) {
+            if (key === "city") selectCity(item);
+            else if (key === "pvz") selectPvz(item);
+            else if (key === "street") selectStreetSuggestion(item);
+            else if (key === "house") selectHouseSuggestion(item);
+          }
         }
         if (event.key === "Escape") hideAutocomplete(key);
       };
@@ -742,15 +873,18 @@
         const items = cart.map((item) => ({ variantId: item.variantId, qty: item.qty || 1 })).filter((item) => item.variantId);
         if (!items.length) return null;
         if (method === "PVZ" && !selectedPvz?.code) return null;
-        if (method === "COURIER" && (!streetInput.value.trim() || !houseInput.value.trim())) return null;
+        if (method === "COURIER") {
+          if (state.street.disabled || state.house.disabled) return null;
+          if (!selectedCourierSuggestion?.street || !selectedHouseSuggestion?.house) return null;
+        }
 
         return {
           method,
           cityCode: selectedCity.code,
           pvzCode: method === "PVZ" ? selectedPvz.code : undefined,
           address: method === "COURIER" ? {
-            street: streetInput.value.trim(),
-            house: houseInput.value.trim(),
+            street: selectedCourierSuggestion.street || streetInput.value.trim(),
+            house: selectedHouseSuggestion.house || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
           } : undefined,
           items,
@@ -823,7 +957,7 @@
             selectedCity = null;
             shippingMethod = null;
             resetDeliverySelection();
-            showShippingError("Пожалуйста, выберите адрес из предложенных вариантов");
+            showShippingError("Пожалуйста, выберите город из списка.");
             validateForm();
             return;
           }
@@ -842,7 +976,7 @@
 
         const value = normalizeQuery(pvzInput.value);
         if (!value) {
-          clearSelectedPvz();
+          clearSelectedPvz({ clearInput: false });
           showPvzError("Обязательное поле");
           renderShippingUI();
           validateForm();
@@ -871,19 +1005,80 @@
             return;
           }
           if (mapped.length > 0) {
-            clearSelectedPvz();
+            clearSelectedPvz({ clearInput: false });
             shippingQuote = null;
-            showPvzError("Пожалуйста, выберите адрес из предложенных вариантов");
+            showPvzError("Пожалуйста, выберите пункт выдачи из списка.");
             renderShippingUI();
             validateForm();
             return;
           }
         } catch (_error) {}
 
-        clearSelectedPvz();
+        clearSelectedPvz({ clearInput: false });
         shippingQuote = null;
         showPvzError("По вашему запросу ничего не найдено");
         renderShippingUI();
+        validateForm();
+      };
+
+      const resolveStreetOnBlur = async () => {
+        const method = getShippingMethod();
+        if (method !== "COURIER") return;
+        if (state.street.disabled) {
+          showStreetError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
+          return;
+        }
+
+        const value = normalizeQuery(streetInput.value);
+        if (!value) {
+          selectedCourierSuggestion = null;
+          selectedHouseSuggestion = null;
+          state.house.disabled = true;
+          showStreetError("Обязательное поле");
+          showHouseError("");
+          validateForm();
+          return;
+        }
+
+        const exactLocal = autoSelectByExactLabel(state.street.items, value);
+        if (exactLocal) {
+          selectStreetSuggestion(exactLocal);
+          return;
+        }
+        showStreetError(state.street.items.length ? "Пожалуйста, выберите улицу из подсказок." : "По вашему запросу ничего не найдено.");
+        selectedCourierSuggestion = null;
+        selectedHouseSuggestion = null;
+        state.house.disabled = true;
+        validateForm();
+      };
+
+      const resolveHouseOnBlur = async () => {
+        const method = getShippingMethod();
+        if (method !== "COURIER") return;
+        if (state.street.disabled || state.house.disabled) {
+          showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
+          return;
+        }
+        if (!selectedCourierSuggestion?.street) {
+          showHouseError("Сначала выберите улицу из списка.");
+          return;
+        }
+
+        const value = normalizeQuery(houseInput.value);
+        if (!value) {
+          selectedHouseSuggestion = null;
+          showHouseError("Обязательное поле");
+          validateForm();
+          return;
+        }
+
+        const exactLocal = autoSelectByExactLabel(state.house.items, value);
+        if (exactLocal) {
+          selectHouseSuggestion(exactLocal);
+          return;
+        }
+        showHouseError(state.house.items.length ? "Пожалуйста, выберите дом из подсказок." : "По вашему запросу ничего не найдено.");
+        selectedHouseSuggestion = null;
         validateForm();
       };
 
@@ -903,7 +1098,9 @@
         const cityOk = Boolean(selectedCity?.code);
         const methodOk = cityOk ? (method === "PVZ" || method === "COURIER") : false;
         const pvzOk = method !== "PVZ" || Boolean(selectedPvz?.code);
-        const courierOk = method !== "COURIER" || (Boolean(streetInput.value.trim()) && Boolean(houseInput.value.trim()));
+        const courierDaDataOk = !(method === "COURIER" && (state.street.disabled || state.house.disabled));
+        const courierOk = method !== "COURIER"
+          || (Boolean(selectedCourierSuggestion?.street) && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
         const consentOk = consentInput.checked;
         const cartOk = getCart().length > 0;
         const shippingOk = Boolean(shippingQuote?.shippingCostMinor);
@@ -917,18 +1114,50 @@
         if (submitted || touched.city) {
           const cityValue = normalizeQuery(cityInput.value);
           if (!cityValue) showShippingError("Обязательное поле");
-          else if (!cityOk && !shippingErrorEl.textContent) showShippingError("Пожалуйста, выберите адрес из предложенных вариантов");
+          else if (!cityOk && !shippingErrorEl.textContent) {
+            showShippingError(state.city.items.length ? "Пожалуйста, выберите город из списка." : "По вашему запросу ничего не найдено.");
+          }
         }
 
         if ((submitted || touched.pvz) && method === "PVZ") {
           const pvzValue = normalizeQuery(pvzInput.value);
           if (!pvzValue && !selectedPvz) showPvzError("Обязательное поле");
-          else if (!pvzOk && !pvzErrorEl.textContent) showPvzError("Пожалуйста, выберите адрес из предложенных вариантов");
+          else if (!pvzOk && !pvzErrorEl.textContent) {
+            showPvzError(state.pvz.items.length ? "Пожалуйста, выберите пункт выдачи из списка." : "По вашему запросу ничего не найдено.");
+          }
+        }
+
+        if ((submitted || touched.street) && method === "COURIER") {
+          if (state.street.disabled || state.house.disabled) {
+            showStreetError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
+          } else if (!selectedCourierSuggestion?.street) {
+            showStreetError(state.street.items.length ? "Пожалуйста, выберите улицу из подсказок." : "По вашему запросу ничего не найдено.");
+          } else {
+            showStreetError("");
+          }
+        }
+
+        if ((submitted || touched.house) && method === "COURIER") {
+          if (state.street.disabled || state.house.disabled) {
+            showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
+          } else if (!selectedHouseSuggestion?.house) {
+            showHouseError(state.house.items.length ? "Пожалуйста, выберите дом из подсказок." : "По вашему запросу ничего не найдено.");
+          } else {
+            showHouseError("");
+          }
         }
 
         if (submitted && !shippingOk && cityOk && methodOk) {
-          showShippingError("Заполните данные доставки для расчета.");
-        } else if (shippingErrorEl.textContent === "Заполните данные доставки для расчета." && (shippingOk || !submitted)) {
+          if (method === "COURIER" && (state.street.disabled || state.house.disabled)) {
+            showShippingError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
+          } else {
+            showShippingError("Заполните данные доставки для расчета.");
+          }
+        } else if (
+          (shippingErrorEl.textContent === "Заполните данные доставки для расчета."
+            || shippingErrorEl.textContent === "Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.")
+          && (shippingOk || !submitted)
+        ) {
           showShippingError("");
         }
       };
@@ -951,18 +1180,18 @@
           payload.pvzAddress = selectedPvz.address || selectedPvz.label;
         } else {
           payload.address = {
-            street: streetInput.value.trim(),
-            house: houseInput.value.trim(),
+            street: selectedCourierSuggestion?.street || streetInput.value.trim(),
+            house: selectedHouseSuggestion?.house || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
-            suggestion: selectedCourierSuggestion
+            suggestion: (selectedCourierSuggestion || selectedHouseSuggestion)
               ? {
-                value: selectedCourierSuggestion.value,
-                street: selectedCourierSuggestion.street,
-                house: selectedCourierSuggestion.house,
-                block: selectedCourierSuggestion.block,
-                geo: selectedCourierSuggestion.geo,
-                fiasId: selectedCourierSuggestion.fiasId,
-                postalCode: selectedCourierSuggestion.postalCode,
+                value: selectedHouseSuggestion?.value || selectedCourierSuggestion?.value,
+                street: selectedCourierSuggestion?.street,
+                house: selectedHouseSuggestion?.house,
+                block: selectedHouseSuggestion?.block || selectedCourierSuggestion?.block,
+                geo: selectedHouseSuggestion?.geo || selectedCourierSuggestion?.geo,
+                fiasId: selectedHouseSuggestion?.fiasId || selectedCourierSuggestion?.fiasId,
+                postalCode: selectedHouseSuggestion?.postalCode || selectedCourierSuggestion?.postalCode,
               }
               : undefined,
           };
@@ -1025,10 +1254,17 @@
         const item = state.street.filtered[Number(itemEl.dataset.idx)];
         if (item) selectStreetSuggestion(item);
       });
+      houseList.addEventListener("click", (event) => {
+        const itemEl = event.target.closest(".autocomplete-item");
+        if (!itemEl) return;
+        const item = state.house.filtered[Number(itemEl.dataset.idx)];
+        if (item) selectHouseSuggestion(item);
+      });
 
       cityList.addEventListener("scroll", (event) => onAutocompleteScroll("city", event));
       pvzList.addEventListener("scroll", (event) => onAutocompleteScroll("pvz", event));
       streetList.addEventListener("scroll", (event) => onAutocompleteScroll("street", event));
+      houseList.addEventListener("scroll", (event) => onAutocompleteScroll("house", event));
 
       cityInput.addEventListener("input", () => {
         selectedCity = null;
@@ -1067,15 +1303,46 @@
 
       streetInput.addEventListener("input", () => {
         selectedCourierSuggestion = null;
+        selectedHouseSuggestion = null;
         shippingQuote = null;
         state.street.disabled = false;
+        state.house.disabled = true;
         streetHint.hidden = true;
+        houseDepsHint.hidden = false;
+        showStreetError("");
+        showHouseError("");
+        houseInput.value = "";
+        hideAutocomplete("house");
+        setInputClearState(houseInput, houseClearBtn);
         loadStreetSuggestions();
         setInputClearState(streetInput, streetClearBtn);
         validateForm();
       });
       streetInput.addEventListener("focus", loadStreetSuggestions);
+      streetInput.addEventListener("blur", () => {
+        touched.street = true;
+        setTimeout(() => {
+          void resolveStreetOnBlur().finally(() => hideAutocomplete("street"));
+        }, 120);
+      });
       streetInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("street", event));
+
+      houseInput.addEventListener("input", () => {
+        selectedHouseSuggestion = null;
+        shippingQuote = null;
+        showHouseError("");
+        loadHouseSuggestions();
+        setInputClearState(houseInput, houseClearBtn);
+        validateForm();
+      });
+      houseInput.addEventListener("focus", loadHouseSuggestions);
+      houseInput.addEventListener("blur", () => {
+        touched.house = true;
+        setTimeout(() => {
+          void resolveHouseOnBlur().finally(() => hideAutocomplete("house"));
+        }, 120);
+      });
+      houseInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("house", event));
 
       cityClearBtn?.addEventListener("click", () => {
         cityInput.value = "";
@@ -1098,10 +1365,24 @@
       streetClearBtn?.addEventListener("click", () => {
         streetInput.value = "";
         selectedCourierSuggestion = null;
+        selectedHouseSuggestion = null;
         state.street.disabled = false;
+        state.house.disabled = true;
         streetHint.hidden = true;
+        houseDepsHint.hidden = false;
+        houseInput.value = "";
+        setInputClearState(houseInput, houseClearBtn);
         hideAutocomplete("street");
+        hideAutocomplete("house");
         setInputClearState(streetInput, streetClearBtn);
+        shippingQuote = null;
+        validateForm();
+      });
+      houseClearBtn?.addEventListener("click", () => {
+        houseInput.value = "";
+        selectedHouseSuggestion = null;
+        hideAutocomplete("house");
+        setInputClearState(houseInput, houseClearBtn);
         shippingQuote = null;
         validateForm();
       });
@@ -1151,6 +1432,7 @@
         if (!event.target.closest("[data-city]") && !event.target.closest("[data-city-autocomplete]")) hideAutocomplete("city");
         if (!event.target.closest("[data-pvz-address]") && !event.target.closest("[data-pvz-autocomplete]")) hideAutocomplete("pvz");
         if (!event.target.closest("[data-courier-street]") && !event.target.closest("[data-street-autocomplete]")) hideAutocomplete("street");
+        if (!event.target.closest("[data-courier-house]") && !event.target.closest("[data-house-autocomplete]")) hideAutocomplete("house");
       });
 
       form.addEventListener("submit", async (event) => {
