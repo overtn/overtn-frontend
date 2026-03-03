@@ -127,7 +127,6 @@
                       <div class="autocomplete-empty muted" data-street-empty hidden>По вашему запросу ничего не найдено</div>
                     </div>
                     <div class="muted" data-street-hint hidden>Подсказки временно недоступны, введите адрес вручную</div>
-                    <div class="muted" data-house-deps-hint hidden>Сначала выберите улицу из списка.</div>
                     <div class="muted form-error" data-street-error></div>
                   </div>
                   <div class="form-inline two-cols">
@@ -240,7 +239,6 @@
       const streetList = document.querySelector("[data-street-list]");
       const streetEmpty = document.querySelector("[data-street-empty]");
       const streetHint = document.querySelector("[data-street-hint]");
-      const houseDepsHint = document.querySelector("[data-house-deps-hint]");
       const streetErrorEl = document.querySelector("[data-street-error]");
       const houseInput = document.querySelector("[data-courier-house]");
       const houseClearBtn = document.querySelector("[data-house-clear]");
@@ -274,6 +272,8 @@
       let shippingMethod = null;
       let shippingQuote = null;
       let quoteRequestId = 0;
+      let streetSuggestUnavailable = false;
+      let houseSuggestUnavailable = false;
 
       const state = {
         city: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null },
@@ -524,8 +524,9 @@
         state.house.disabled = true;
         state.house.items = [];
         state.house.filtered = [];
+        streetSuggestUnavailable = false;
+        houseSuggestUnavailable = false;
         streetHint.hidden = true;
-        houseDepsHint.hidden = false;
         showStreetError("");
         showHouseError("");
         hideAutocomplete("street");
@@ -557,7 +558,6 @@
       const renderCourierFlow = () => {
         hidePvzFlow();
         showBlock(courierFields);
-        houseDepsHint.hidden = Boolean(selectedStreetSuggestion) || state.street.disabled;
       };
 
       const hideCourierFlow = () => {
@@ -657,12 +657,6 @@
 
       const loadCities = () => {
         const q = normalizeQuery(cityInput.value);
-        if (!q) {
-          setAutocompleteData("city", []);
-          hideAutocomplete("city");
-          return;
-        }
-
         scheduleLookup("city", async () => {
           const st = state.city;
           st.requestSeq += 1;
@@ -679,7 +673,6 @@
             if (error?.name === "AbortError") return;
             setAutocompleteData("city", []);
             hideAutocomplete("city");
-            showShippingError("CDEK temporarily unavailable");
           }
         }, 300);
       };
@@ -703,7 +696,6 @@
             if (error?.name === "AbortError") return;
             setAutocompleteData("pvz", []);
             hideAutocomplete("pvz");
-            showPvzError("CDEK temporarily unavailable");
           }
         }, 300);
       };
@@ -714,7 +706,8 @@
         streetInput.value = item.street || item.value || "";
         houseInput.value = "";
         state.house.disabled = false;
-        houseDepsHint.hidden = true;
+        streetSuggestUnavailable = false;
+        houseSuggestUnavailable = false;
         showStreetError("");
         showHouseError("");
         hideAutocomplete("street");
@@ -728,11 +721,6 @@
       const loadStreetSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.street.disabled) return;
         const q = normalizeQuery(streetInput.value);
-        if (!q) {
-          setAutocompleteData("street", []);
-          hideAutocomplete("street");
-          return;
-        }
 
         scheduleLookup("street", async () => {
           const st = state.street;
@@ -746,19 +734,23 @@
             const rows = Array.isArray(result) ? result : (result.items || []);
             const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
             if (meta.disabled) {
+              streetSuggestUnavailable = true;
+              houseSuggestUnavailable = true;
               st.disabled = true;
               state.house.disabled = true;
               streetHint.hidden = false;
-              houseDepsHint.hidden = true;
               setAutocompleteData("street", []);
               hideAutocomplete("street");
               return;
             }
+            streetSuggestUnavailable = false;
             st.disabled = false;
             streetHint.hidden = true;
             setAutocompleteData("street", mapStreetRows(rows));
           } catch (error) {
             if (error?.name === "AbortError") return;
+            streetSuggestUnavailable = true;
+            houseSuggestUnavailable = true;
             streetHint.hidden = false;
             state.house.disabled = true;
             setAutocompleteData("street", []);
@@ -770,6 +762,7 @@
       const selectHouseSuggestion = (item) => {
         selectedHouseSuggestion = item;
         houseInput.value = item.house || item.value || "";
+        houseSuggestUnavailable = false;
         showHouseError("");
         hideAutocomplete("house");
         setInputClearState(houseInput, houseClearBtn);
@@ -781,7 +774,6 @@
       const loadHouseSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.house.disabled) return;
         if (!selectedStreetSuggestion?.street) {
-          houseDepsHint.hidden = false;
           return;
         }
         const q = normalizeQuery(houseInput.value);
@@ -801,15 +793,18 @@
             const rows = Array.isArray(result) ? result : (result.items || []);
             const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
             if (meta.disabled) {
+              houseSuggestUnavailable = true;
               state.house.disabled = true;
               setAutocompleteData("house", []);
               hideAutocomplete("house");
               return;
             }
+            houseSuggestUnavailable = false;
             state.house.disabled = false;
             setAutocompleteData("house", mapHouseRows(rows));
           } catch (error) {
             if (error?.name === "AbortError") return;
+            houseSuggestUnavailable = true;
             setAutocompleteData("house", []);
             hideAutocomplete("house");
           }
@@ -1027,7 +1022,7 @@
       const resolveStreetOnBlur = async () => {
         const method = getShippingMethod();
         if (method !== "COURIER") return;
-        if (state.street.disabled) {
+        if (streetSuggestUnavailable) {
           showStreetError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           return;
         }
@@ -1058,7 +1053,7 @@
       const resolveHouseOnBlur = async () => {
         const method = getShippingMethod();
         if (method !== "COURIER") return;
-        if (state.street.disabled || state.house.disabled) {
+        if (houseSuggestUnavailable || streetSuggestUnavailable) {
           showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           return;
         }
@@ -1101,7 +1096,7 @@
         const cityOk = Boolean(selectedCity?.code);
         const methodOk = cityOk ? (method === "PVZ" || method === "COURIER") : false;
         const pvzOk = method !== "PVZ" || Boolean(selectedPvz?.code);
-        const courierDaDataOk = !(method === "COURIER" && (state.street.disabled || state.house.disabled));
+        const courierDaDataOk = !(streetSuggestUnavailable || houseSuggestUnavailable);
         const courierOk = method !== "COURIER"
           || (Boolean(selectedStreetSuggestion?.street) && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
         const consentOk = consentInput.checked;
@@ -1131,7 +1126,7 @@
         }
 
         if ((submitted || touched.street) && method === "COURIER") {
-          if (state.street.disabled || state.house.disabled) {
+          if (streetSuggestUnavailable || houseSuggestUnavailable) {
             showStreetError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           } else if (!selectedStreetSuggestion?.street) {
             showStreetError(state.street.items.length ? "Пожалуйста, выберите улицу из подсказок." : "По вашему запросу ничего не найдено.");
@@ -1141,7 +1136,7 @@
         }
 
         if ((submitted || touched.house) && method === "COURIER") {
-          if (state.street.disabled || state.house.disabled) {
+          if (streetSuggestUnavailable || houseSuggestUnavailable) {
             showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           } else if (!selectedHouseSuggestion?.house) {
             showHouseError(state.house.items.length ? "Пожалуйста, выберите дом из подсказок." : "По вашему запросу ничего не найдено.");
@@ -1151,7 +1146,7 @@
         }
 
         if (submitted && !shippingOk && cityOk && methodOk) {
-          if (method === "COURIER" && (state.street.disabled || state.house.disabled)) {
+          if (method === "COURIER" && (streetSuggestUnavailable || houseSuggestUnavailable)) {
             showShippingError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           } else {
             showShippingError("Заполните данные доставки для расчета.");
@@ -1311,8 +1306,9 @@
         shippingQuote = null;
         state.street.disabled = false;
         state.house.disabled = true;
+        streetSuggestUnavailable = false;
+        houseSuggestUnavailable = false;
         streetHint.hidden = true;
-        houseDepsHint.hidden = false;
         showStreetError("");
         showHouseError("");
         houseInput.value = "";
@@ -1373,7 +1369,6 @@
         state.street.disabled = false;
         state.house.disabled = true;
         streetHint.hidden = true;
-        houseDepsHint.hidden = false;
         houseInput.value = "";
         setInputClearState(houseInput, houseClearBtn);
         hideAutocomplete("street");
@@ -1386,6 +1381,7 @@
         houseInput.value = "";
         selectedHouseSuggestion = null;
         hideAutocomplete("house");
+        houseSuggestUnavailable = false;
         setInputClearState(houseInput, houseClearBtn);
         shippingQuote = null;
         validateForm();
