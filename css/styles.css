@@ -1054,11 +1054,12 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  font-size: 17px;
-  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  font-size: 20px;
+  color: rgba(20, 16, 14, 0.72);
   line-height: 1;
+  font-weight: 600;
 }
 
 .search-field input {

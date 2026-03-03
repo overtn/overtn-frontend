@@ -266,9 +266,10 @@
       };
       let submitted = false;
       let appliedPromo = null;
+      // Selected objects for strict "pick from suggestions" validation.
       let selectedCity = null;
       let selectedPvz = null;
-      let selectedCourierSuggestion = null;
+      let selectedStreetSuggestion = null;
       let selectedHouseSuggestion = null;
       let shippingMethod = null;
       let shippingQuote = null;
@@ -291,15 +292,22 @@
       const getDiscount = () => (appliedPromo ? Math.round((getSubtotal() * appliedPromo.discountPercent) / 100) : 0);
       const normalizeQuery = (value) => (value || "").trim().replace(/\s+/g, " ");
 
-      const showFieldError = (kind, show) => {
-        if (kind === "email") emailError.style.display = show ? "block" : "none";
-        if (kind === "phone") phoneError.style.display = show ? "block" : "none";
+      const setFormError = (el, message) => {
+        const text = message || "";
+        el.textContent = text;
+        el.style.display = text ? "block" : "none";
       };
-      const showRecipientError = (show) => { recipientError.style.display = show ? "block" : "none"; };
-      const showShippingError = (message) => { shippingErrorEl.textContent = message || ""; };
-      const showPvzError = (message) => { pvzErrorEl.textContent = message || ""; };
-      const showStreetError = (message) => { streetErrorEl.textContent = message || ""; };
-      const showHouseError = (message) => { houseErrorEl.textContent = message || ""; };
+      const showFieldError = (kind, show) => {
+        if (kind === "email") setFormError(emailError, show ? "Введите корректный email." : "");
+        if (kind === "phone") setFormError(phoneError, show ? "Введите корректный номер телефона." : "");
+      };
+      const showRecipientError = (show) => {
+        setFormError(recipientError, show ? "Введите ФИО полностью (Фамилия Имя Отчество)" : "");
+      };
+      const showShippingError = (message) => setFormError(shippingErrorEl, message);
+      const showPvzError = (message) => setFormError(pvzErrorEl, message);
+      const showStreetError = (message) => setFormError(streetErrorEl, message);
+      const showHouseError = (message) => setFormError(houseErrorEl, message);
       const setInputClearState = (input, btn) => { btn?.classList.toggle("show", Boolean(input.value.trim())); };
 
       const setResult = (text) => {
@@ -508,7 +516,7 @@
         streetInput.value = "";
         houseInput.value = "";
         flatInput.value = "";
-        selectedCourierSuggestion = null;
+        selectedStreetSuggestion = null;
         selectedHouseSuggestion = null;
         state.street.disabled = false;
         state.street.items = [];
@@ -549,7 +557,7 @@
       const renderCourierFlow = () => {
         hidePvzFlow();
         showBlock(courierFields);
-        houseDepsHint.hidden = Boolean(selectedCourierSuggestion) || state.street.disabled;
+        houseDepsHint.hidden = Boolean(selectedStreetSuggestion) || state.street.disabled;
       };
 
       const hideCourierFlow = () => {
@@ -701,7 +709,7 @@
       };
 
       const selectStreetSuggestion = (item) => {
-        selectedCourierSuggestion = item;
+        selectedStreetSuggestion = item;
         selectedHouseSuggestion = null;
         streetInput.value = item.street || item.value || "";
         houseInput.value = "";
@@ -772,16 +780,11 @@
 
       const loadHouseSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.house.disabled) return;
-        if (!selectedCourierSuggestion?.street) {
+        if (!selectedStreetSuggestion?.street) {
           houseDepsHint.hidden = false;
           return;
         }
         const q = normalizeQuery(houseInput.value);
-        if (!q) {
-          setAutocompleteData("house", []);
-          hideAutocomplete("house");
-          return;
-        }
 
         scheduleLookup("house", async () => {
           const st = state.house;
@@ -791,7 +794,7 @@
           st.controller = new AbortController();
           try {
             const result = await window.apiRequest(
-              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(selectedCourierSuggestion.street || selectedCourierSuggestion.value || "")}&mode=house`,
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(selectedStreetSuggestion.street || selectedStreetSuggestion.value || "")}&mode=house`,
               { signal: st.controller.signal },
             );
             if (requestId !== st.requestSeq) return;
@@ -875,7 +878,7 @@
         if (method === "PVZ" && !selectedPvz?.code) return null;
         if (method === "COURIER") {
           if (state.street.disabled || state.house.disabled) return null;
-          if (!selectedCourierSuggestion?.street || !selectedHouseSuggestion?.house) return null;
+          if (!selectedStreetSuggestion?.street || !selectedHouseSuggestion?.house) return null;
         }
 
         return {
@@ -883,7 +886,7 @@
           cityCode: selectedCity.code,
           pvzCode: method === "PVZ" ? selectedPvz.code : undefined,
           address: method === "COURIER" ? {
-            street: selectedCourierSuggestion.street || streetInput.value.trim(),
+            street: selectedStreetSuggestion.street || streetInput.value.trim(),
             house: selectedHouseSuggestion.house || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
           } : undefined,
@@ -1031,7 +1034,7 @@
 
         const value = normalizeQuery(streetInput.value);
         if (!value) {
-          selectedCourierSuggestion = null;
+          selectedStreetSuggestion = null;
           selectedHouseSuggestion = null;
           state.house.disabled = true;
           showStreetError("Обязательное поле");
@@ -1046,7 +1049,7 @@
           return;
         }
         showStreetError(state.street.items.length ? "Пожалуйста, выберите улицу из подсказок." : "По вашему запросу ничего не найдено.");
-        selectedCourierSuggestion = null;
+        selectedStreetSuggestion = null;
         selectedHouseSuggestion = null;
         state.house.disabled = true;
         validateForm();
@@ -1059,7 +1062,7 @@
           showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           return;
         }
-        if (!selectedCourierSuggestion?.street) {
+        if (!selectedStreetSuggestion?.street) {
           showHouseError("Сначала выберите улицу из списка.");
           return;
         }
@@ -1100,7 +1103,7 @@
         const pvzOk = method !== "PVZ" || Boolean(selectedPvz?.code);
         const courierDaDataOk = !(method === "COURIER" && (state.street.disabled || state.house.disabled));
         const courierOk = method !== "COURIER"
-          || (Boolean(selectedCourierSuggestion?.street) && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
+          || (Boolean(selectedStreetSuggestion?.street) && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
         const consentOk = consentInput.checked;
         const cartOk = getCart().length > 0;
         const shippingOk = Boolean(shippingQuote?.shippingCostMinor);
@@ -1130,7 +1133,7 @@
         if ((submitted || touched.street) && method === "COURIER") {
           if (state.street.disabled || state.house.disabled) {
             showStreetError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
-          } else if (!selectedCourierSuggestion?.street) {
+          } else if (!selectedStreetSuggestion?.street) {
             showStreetError(state.street.items.length ? "Пожалуйста, выберите улицу из подсказок." : "По вашему запросу ничего не найдено.");
           } else {
             showStreetError("");
@@ -1180,18 +1183,18 @@
           payload.pvzAddress = selectedPvz.address || selectedPvz.label;
         } else {
           payload.address = {
-            street: selectedCourierSuggestion?.street || streetInput.value.trim(),
+            street: selectedStreetSuggestion?.street || streetInput.value.trim(),
             house: selectedHouseSuggestion?.house || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
-            suggestion: (selectedCourierSuggestion || selectedHouseSuggestion)
+            suggestion: (selectedStreetSuggestion || selectedHouseSuggestion)
               ? {
-                value: selectedHouseSuggestion?.value || selectedCourierSuggestion?.value,
-                street: selectedCourierSuggestion?.street,
+                value: selectedHouseSuggestion?.value || selectedStreetSuggestion?.value,
+                street: selectedStreetSuggestion?.street,
                 house: selectedHouseSuggestion?.house,
-                block: selectedHouseSuggestion?.block || selectedCourierSuggestion?.block,
-                geo: selectedHouseSuggestion?.geo || selectedCourierSuggestion?.geo,
-                fiasId: selectedHouseSuggestion?.fiasId || selectedCourierSuggestion?.fiasId,
-                postalCode: selectedHouseSuggestion?.postalCode || selectedCourierSuggestion?.postalCode,
+                block: selectedHouseSuggestion?.block || selectedStreetSuggestion?.block,
+                geo: selectedHouseSuggestion?.geo || selectedStreetSuggestion?.geo,
+                fiasId: selectedHouseSuggestion?.fiasId || selectedStreetSuggestion?.fiasId,
+                postalCode: selectedHouseSuggestion?.postalCode || selectedStreetSuggestion?.postalCode,
               }
               : undefined,
           };
@@ -1266,6 +1269,7 @@
       streetList.addEventListener("scroll", (event) => onAutocompleteScroll("street", event));
       houseList.addEventListener("scroll", (event) => onAutocompleteScroll("house", event));
 
+      // Checkout autocomplete + blur handlers (wired to real inputs below).
       cityInput.addEventListener("input", () => {
         selectedCity = null;
         shippingMethod = null;
@@ -1302,7 +1306,7 @@
       pvzInput.addEventListener("keydown", (event) => handleAutocompleteKeydown("pvz", event));
 
       streetInput.addEventListener("input", () => {
-        selectedCourierSuggestion = null;
+        selectedStreetSuggestion = null;
         selectedHouseSuggestion = null;
         shippingQuote = null;
         state.street.disabled = false;
@@ -1364,7 +1368,7 @@
       });
       streetClearBtn?.addEventListener("click", () => {
         streetInput.value = "";
-        selectedCourierSuggestion = null;
+        selectedStreetSuggestion = null;
         selectedHouseSuggestion = null;
         state.street.disabled = false;
         state.house.disabled = true;
