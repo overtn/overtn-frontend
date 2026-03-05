@@ -291,6 +291,16 @@
       const getSubtotal = () => getCart().reduce((sum, item) => sum + Number(item.numericPrice || 0) * Number(item.qty || 0), 0);
       const getDiscount = () => (appliedPromo ? Math.round((getSubtotal() * appliedPromo.discountPercent) / 100) : 0);
       const normalizeQuery = (value) => (value || "").trim().replace(/\s+/g, " ");
+      const extractStreetOnly = (value) => {
+        const raw = normalizeQuery(value);
+        if (!raw) return "";
+        const beforeComma = raw.split(",")[0].trim();
+        const cleaned = beforeComma
+          .replace(/\s+(д\.?|дом|к\.?|корп\.?|корпус|стр\.?|строение)\s*\d.*$/i, "")
+          .replace(/\s+\d+[A-Za-zА-Яа-я-]*\s*$/u, "")
+          .trim();
+        return cleaned || beforeComma;
+      };
 
       const setFormError = (el, message) => {
         const text = message || "";
@@ -451,6 +461,7 @@
 
       const mapStreetRows = (rows) => (rows || []).map((row) => ({
         ...row,
+        streetOnly: extractStreetOnly(row.street || row.value || ""),
         title: row.value || [row.street, row.house].filter(Boolean).join(", "),
         subtitle: [row.street, row.house ? `дом ${row.house}` : ""].filter(Boolean).join(", "),
       }));
@@ -701,9 +712,10 @@
       };
 
       const selectStreetSuggestion = (item) => {
+        const normalizedStreet = extractStreetOnly(item.streetOnly || item.street || item.value || "");
         selectedStreetSuggestion = item;
         selectedHouseSuggestion = null;
-        streetInput.value = item.street || item.value || "";
+        streetInput.value = normalizedStreet;
         houseInput.value = "";
         state.house.disabled = false;
         streetSuggestUnavailable = false;
@@ -773,7 +785,8 @@
 
       const loadHouseSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.house.disabled) return;
-        if (!(selectedStreetSuggestion?.street || selectedStreetSuggestion?.value)) {
+        const normalizedStreet = extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || selectedStreetSuggestion?.value || streetInput.value);
+        if (!normalizedStreet) {
           return;
         }
         const q = normalizeQuery(houseInput.value);
@@ -786,7 +799,7 @@
           st.controller = new AbortController();
           try {
             const result = await window.apiRequest(
-              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(selectedStreetSuggestion.value || selectedStreetSuggestion.street || "")}&mode=house`,
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(normalizedStreet)}&mode=house`,
               { signal: st.controller.signal },
             );
             if (requestId !== st.requestSeq) return;
@@ -881,7 +894,7 @@
           cityCode: selectedCity.code,
           pvzCode: method === "PVZ" ? selectedPvz.code : undefined,
           address: method === "COURIER" ? {
-            street: selectedStreetSuggestion.street || streetInput.value.trim(),
+            street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
             house: selectedHouseSuggestion.house || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
           } : undefined,
@@ -1198,13 +1211,13 @@
           payload.pvzAddress = selectedPvz.address || selectedPvz.label;
         } else {
           payload.address = {
-            street: selectedStreetSuggestion?.street || streetInput.value.trim(),
+            street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
             house: selectedHouseSuggestion?.house || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
             suggestion: (selectedStreetSuggestion || selectedHouseSuggestion)
               ? {
                 value: selectedHouseSuggestion?.value || selectedStreetSuggestion?.value,
-                street: selectedStreetSuggestion?.street,
+                street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || ""),
                 house: selectedHouseSuggestion?.house,
                 block: selectedHouseSuggestion?.block || selectedStreetSuggestion?.block,
                 geo: selectedHouseSuggestion?.geo || selectedStreetSuggestion?.geo,
