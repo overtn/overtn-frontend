@@ -773,7 +773,7 @@
 
       const loadHouseSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.house.disabled) return;
-        if (!selectedStreetSuggestion?.street) {
+        if (!(selectedStreetSuggestion?.street || selectedStreetSuggestion?.value)) {
           return;
         }
         const q = normalizeQuery(houseInput.value);
@@ -786,7 +786,7 @@
           st.controller = new AbortController();
           try {
             const result = await window.apiRequest(
-              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(selectedStreetSuggestion.street || selectedStreetSuggestion.value || "")}&mode=house`,
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(selectedStreetSuggestion.value || selectedStreetSuggestion.street || "")}&mode=house`,
               { signal: st.controller.signal },
             );
             if (requestId !== st.requestSeq) return;
@@ -1038,6 +1038,16 @@
           return;
         }
 
+        if (selectedStreetSuggestion) {
+          const selectedValue = normalizeQuery(
+            selectedStreetSuggestion.street || selectedStreetSuggestion.value || selectedStreetSuggestion.title || ""
+          );
+          if (selectedValue && selectedValue.toLocaleLowerCase("ru-RU") === value.toLocaleLowerCase("ru-RU")) {
+            showStreetError("");
+            return;
+          }
+        }
+
         const exactLocal = autoSelectByExactLabel(state.street.items, value);
         if (exactLocal) {
           selectStreetSuggestion(exactLocal);
@@ -1057,7 +1067,7 @@
           showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           return;
         }
-        if (!selectedStreetSuggestion?.street) {
+        if (!(selectedStreetSuggestion?.street || selectedStreetSuggestion?.value)) {
           showHouseError("Сначала выберите улицу из списка.");
           return;
         }
@@ -1068,6 +1078,16 @@
           showHouseError("Обязательное поле");
           validateForm();
           return;
+        }
+
+        if (selectedHouseSuggestion) {
+          const selectedValue = normalizeQuery(
+            selectedHouseSuggestion.house || selectedHouseSuggestion.value || selectedHouseSuggestion.title || ""
+          );
+          if (selectedValue && selectedValue.toLocaleLowerCase("ru-RU") === value.toLocaleLowerCase("ru-RU")) {
+            showHouseError("");
+            return;
+          }
         }
 
         const exactLocal = autoSelectByExactLabel(state.house.items, value);
