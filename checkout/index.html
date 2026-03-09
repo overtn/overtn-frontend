@@ -886,7 +886,10 @@
         if (method === "PVZ" && !selectedPvz?.code) return null;
         if (method === "COURIER") {
           if (state.street.disabled || state.house.disabled) return null;
-          if (!selectedStreetSuggestion?.street || !selectedHouseSuggestion?.house) return null;
+          const selectedStreetValue = extractStreetOnly(
+            selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || selectedStreetSuggestion?.value || ""
+          );
+          if (!selectedStreetValue || !selectedHouseSuggestion?.house) return null;
         }
 
         return {
@@ -1053,9 +1056,14 @@
 
         if (selectedStreetSuggestion) {
           const selectedValue = normalizeQuery(
-            selectedStreetSuggestion.street || selectedStreetSuggestion.value || selectedStreetSuggestion.title || ""
+            selectedStreetSuggestion.streetOnly
+            || selectedStreetSuggestion.street
+            || selectedStreetSuggestion.value
+            || selectedStreetSuggestion.title
+            || ""
           );
           if (selectedValue && selectedValue.toLocaleLowerCase("ru-RU") === value.toLocaleLowerCase("ru-RU")) {
+            state.house.disabled = false;
             showStreetError("");
             return;
           }
