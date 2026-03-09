@@ -476,7 +476,7 @@
 
       const mapHouseRows = (rows) => (rows || []).map((row) => ({
         ...row,
-        title: row.house ? `дом ${row.house}${row.block ? `, ${row.block}` : ""}` : row.value,
+        title: row.houseLabel || (row.house ? `дом ${row.house}${row.block ? `, ${row.block}` : ""}` : row.value),
         subtitle: row.value || "",
       }));
 
@@ -781,7 +781,7 @@
 
       const selectHouseSuggestion = (item) => {
         selectedHouseSuggestion = item;
-        houseInput.value = item.house || item.value || "";
+        houseInput.value = item.house || item.houseLabel || item.value || "";
         houseSuggestUnavailable = false;
         showHouseError("");
         hideAutocomplete("house");
@@ -793,8 +793,12 @@
 
       const loadHouseSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.house.disabled) return;
-        const normalizedStreet = extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || selectedStreetSuggestion?.value || streetInput.value);
-        if (!normalizedStreet) {
+        const streetForQuery = normalizeQuery(
+          selectedStreetSuggestion?.street
+          || selectedStreetSuggestion?.value
+          || streetInput.value
+        );
+        if (!streetForQuery) {
           return;
         }
         const q = normalizeQuery(houseInput.value);
@@ -807,7 +811,7 @@
           st.controller = new AbortController();
           try {
             const result = await window.apiRequest(
-              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(normalizedStreet)}&mode=house`,
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(streetForQuery)}&mode=house`,
               { signal: st.controller.signal },
             );
             if (requestId !== st.requestSeq) return;
@@ -903,7 +907,7 @@
           pvzCode: method === "PVZ" ? selectedPvz.code : undefined,
           address: method === "COURIER" ? {
             street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
-            house: selectedHouseSuggestion.house || houseInput.value.trim(),
+            house: selectedHouseSuggestion.house || selectedHouseSuggestion.houseLabel || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
           } : undefined,
           items,
@@ -1225,13 +1229,13 @@
         } else {
           payload.address = {
             street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
-            house: selectedHouseSuggestion?.house || houseInput.value.trim(),
+            house: selectedHouseSuggestion?.house || selectedHouseSuggestion?.houseLabel || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
             suggestion: (selectedStreetSuggestion || selectedHouseSuggestion)
               ? {
                 value: selectedHouseSuggestion?.value || selectedStreetSuggestion?.value,
                 street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || ""),
-                house: selectedHouseSuggestion?.house,
+                house: selectedHouseSuggestion?.house || selectedHouseSuggestion?.houseLabel,
                 block: selectedHouseSuggestion?.block || selectedStreetSuggestion?.block,
                 geo: selectedHouseSuggestion?.geo || selectedStreetSuggestion?.geo,
                 fiasId: selectedHouseSuggestion?.fiasId || selectedStreetSuggestion?.fiasId,
