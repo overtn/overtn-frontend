@@ -301,6 +301,14 @@
           .trim();
         return cleaned || beforeComma;
       };
+      const hasSelectedStreet = () => Boolean(
+        extractStreetOnly(
+          selectedStreetSuggestion?.streetOnly
+          || selectedStreetSuggestion?.street
+          || selectedStreetSuggestion?.value
+          || ""
+        )
+      );
 
       const setFormError = (el, message) => {
         const text = message || "";
@@ -886,10 +894,7 @@
         if (method === "PVZ" && !selectedPvz?.code) return null;
         if (method === "COURIER") {
           if (state.street.disabled || state.house.disabled) return null;
-          const selectedStreetValue = extractStreetOnly(
-            selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || selectedStreetSuggestion?.value || ""
-          );
-          if (!selectedStreetValue || !selectedHouseSuggestion?.house) return null;
+          if (!hasSelectedStreet() || !selectedHouseSuggestion?.house) return null;
         }
 
         return {
@@ -1088,7 +1093,7 @@
           showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
           return;
         }
-        if (!(selectedStreetSuggestion?.street || selectedStreetSuggestion?.value)) {
+        if (!hasSelectedStreet()) {
           showHouseError("Сначала выберите улицу из списка.");
           return;
         }
@@ -1139,7 +1144,7 @@
         const pvzOk = method !== "PVZ" || Boolean(selectedPvz?.code);
         const courierDaDataOk = !(streetSuggestUnavailable || houseSuggestUnavailable);
         const courierOk = method !== "COURIER"
-          || (Boolean(selectedStreetSuggestion?.street) && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
+          || (hasSelectedStreet() && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
         const consentOk = consentInput.checked;
         const cartOk = getCart().length > 0;
         const shippingOk = Boolean(shippingQuote?.shippingCostMinor);
@@ -1169,7 +1174,7 @@
         if ((submitted || touched.street) && method === "COURIER") {
           if (streetSuggestUnavailable || houseSuggestUnavailable) {
             showStreetError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
-          } else if (!selectedStreetSuggestion?.street) {
+          } else if (!hasSelectedStreet()) {
             showStreetError(state.street.items.length ? "Пожалуйста, выберите улицу из подсказок." : "По вашему запросу ничего не найдено.");
           } else {
             showStreetError("");
