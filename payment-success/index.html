@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
+    <div id="preloader">
+      <img src="/assets/logo-preloader.png" alt="OVERTN" class="preloader-logo" />
+    </div>
     <main class="checkout-page">
       <section class="checkout-card">
         <h1>Проверяем оплату…</h1>
@@ -21,6 +24,7 @@
     </main>
 
     <script src="/js/config.js"></script>
+    <script src="/js/preloader.js"></script>
     <script>
       const statusEl = document.querySelector("[data-status]");
       const params = new URLSearchParams(window.location.search);
