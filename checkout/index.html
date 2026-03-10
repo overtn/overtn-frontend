@@ -794,9 +794,16 @@
       const loadHouseSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name) return;
         const streetForQuery = normalizeQuery(
-          selectedStreetSuggestion?.street
+          selectedStreetSuggestion?.data?.street_with_type
+          || selectedStreetSuggestion?.data?.street
+          || selectedStreetSuggestion?.street
           || selectedStreetSuggestion?.value
           || streetInput.value
+        );
+        const streetFiasId = normalizeQuery(
+          selectedStreetSuggestion?.data?.street_fias_id
+          || selectedStreetSuggestion?.streetFiasId
+          || ""
         );
         if (!streetForQuery) {
           return;
@@ -815,7 +822,7 @@
           st.controller = new AbortController();
           try {
             const result = await window.apiRequest(
-              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(streetForQuery)}&mode=house`,
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&street=${encodeURIComponent(streetForQuery)}&streetFiasId=${encodeURIComponent(streetFiasId)}&mode=house`,
               { signal: st.controller.signal },
             );
             if (requestId !== st.requestSeq) return;
