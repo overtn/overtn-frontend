@@ -309,6 +309,18 @@
           || ""
         )
       );
+      const getSelectedHouseValue = () => normalizeQuery(
+        selectedHouseSuggestion?.houseLabel
+        || selectedHouseSuggestion?.house
+        || selectedHouseSuggestion?.value
+        || ""
+      );
+      const isHouseSelectionSynced = () => {
+        if (!selectedHouseSuggestion) return false;
+        const selectedValue = getSelectedHouseValue();
+        const currentValue = normalizeQuery(houseInput.value);
+        return Boolean(selectedValue) && selectedValue.toLocaleLowerCase("ru-RU") === currentValue.toLocaleLowerCase("ru-RU");
+      };
 
       const setFormError = (el, message) => {
         const text = message || "";
@@ -909,7 +921,7 @@
         if (method === "PVZ" && !selectedPvz?.code) return null;
         if (method === "COURIER") {
           if (state.street.disabled || state.house.disabled) return null;
-          if (!hasSelectedStreet() || !selectedHouseSuggestion?.house) return null;
+          if (!hasSelectedStreet() || !isHouseSelectionSynced()) return null;
         }
 
         return {
@@ -918,7 +930,7 @@
           pvzCode: method === "PVZ" ? selectedPvz.code : undefined,
           address: method === "COURIER" ? {
             street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
-            house: selectedHouseSuggestion.house || selectedHouseSuggestion.houseLabel || houseInput.value.trim(),
+            house: getSelectedHouseValue() || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
           } : undefined,
           items,
@@ -1122,9 +1134,7 @@
         }
 
         if (selectedHouseSuggestion) {
-          const selectedValue = normalizeQuery(
-            selectedHouseSuggestion.house || selectedHouseSuggestion.value || selectedHouseSuggestion.title || ""
-          );
+          const selectedValue = getSelectedHouseValue();
           if (selectedValue && selectedValue.toLocaleLowerCase("ru-RU") === value.toLocaleLowerCase("ru-RU")) {
             showHouseError("");
             return;
@@ -1159,7 +1169,7 @@
         const pvzOk = method !== "PVZ" || Boolean(selectedPvz?.code);
         const courierDaDataOk = !(streetSuggestUnavailable || houseSuggestUnavailable);
         const courierOk = method !== "COURIER"
-          || (hasSelectedStreet() && Boolean(selectedHouseSuggestion?.house) && courierDaDataOk);
+          || (hasSelectedStreet() && isHouseSelectionSynced() && courierDaDataOk);
         const consentOk = consentInput.checked;
         const cartOk = getCart().length > 0;
         const shippingOk = Boolean(shippingQuote?.shippingCostMinor);
@@ -1199,7 +1209,7 @@
         if ((submitted || touched.house) && method === "COURIER") {
           if (streetSuggestUnavailable || houseSuggestUnavailable) {
             showHouseError("Подсказки адреса временно недоступны. Выберите доставку до ПВЗ.");
-          } else if (!selectedHouseSuggestion?.house) {
+          } else if (!isHouseSelectionSynced()) {
             showHouseError(state.house.items.length ? "Пожалуйста, выберите дом из подсказок." : "По вашему запросу ничего не найдено.");
           } else {
             showHouseError("");
@@ -1240,7 +1250,7 @@
         } else {
           payload.address = {
             street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
-            house: selectedHouseSuggestion?.house || selectedHouseSuggestion?.houseLabel || houseInput.value.trim(),
+            house: getSelectedHouseValue() || houseInput.value.trim(),
             flat: flatInput.value.trim() || undefined,
             suggestion: (selectedStreetSuggestion || selectedHouseSuggestion)
               ? {
@@ -1394,6 +1404,10 @@
         showHouseError("");
         loadHouseSuggestions();
         setInputClearState(houseInput, houseClearBtn);
+        validateForm();
+      });
+      houseInput.addEventListener("change", () => {
+        if (!isHouseSelectionSynced()) selectedHouseSuggestion = null;
         validateForm();
       });
       houseInput.addEventListener("focus", loadHouseSuggestions);
