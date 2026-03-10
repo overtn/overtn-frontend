@@ -48,9 +48,14 @@ const renderProduct = async () => {
   if (galleryGrid) {
     galleryGrid.innerHTML = images
       .map(
-        (img) => `
+        (img, index) => `
         <div class="gallery-item">
-          <img src="${img}" alt="${product.name}" data-zoom="${img}" />
+          <img
+            src="${img}"
+            alt="${product.name}"
+            data-zoom="${img}"
+            ${index === 0 ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"'}
+          />
         </div>`
       )
       .join("");

@@ -425,7 +425,7 @@
         orderItemsEl.innerHTML = cart.map((item) => {
           const lineTotal = Number(item.numericPrice || 0) * Number(item.qty || 0);
           return `<div class="checkout-item" data-item-id="${item.id}" data-item-size="${item.size || ""}">
-            <img src="${item.image}" alt="${item.name}" />
+            <img src="${item.image}" alt="${item.name}" loading="lazy" decoding="async" />
             <div class="checkout-item-meta">
               <strong>${item.name}</strong>
               <span>${formatRub(Number(item.numericPrice || 0))} × ${item.qty}</span>

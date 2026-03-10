@@ -20,7 +20,7 @@
           <a href="/support/">Поддержка</a>
         </div>
         <a class="logo-link" href="/">
-          <img src="/assets/logo.png" alt="Логотип бренда" onerror="this.src='/assets/logo-placeholder.svg'" />
+          <img src="/assets/logo.png" alt="Логотип бренда" decoding="async" onerror="this.src='/assets/logo-placeholder.svg'" />
         </a>
         <div class="nav-right">
           <a class="social-link" href="https://www.instagram.com/overtn.brand/" target="_blank" rel="noopener noreferrer">
@@ -35,7 +35,7 @@
               <path d="M21.5 3.5L2.8 11.2c-.6.3-.6 1.1.1 1.3l4.9 1.6 2 4.7c.2.6 1 .7 1.4.2l2.9-2.8 4.8 3.5c.5.4 1.2.1 1.4-.5L22 4.8c.2-.8-.5-1.5-1.3-1.3z" />
             </svg>
           </a>
-          <button class="cart-button" type="button" data-cart-toggle onclick="window.brandStore?.toggleCartDrawer?.()">
+          <button class="cart-button" type="button" data-cart-toggle>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M3 4h2l2.4 10.5a2 2 0 0 0 2 1.5h7.6a2 2 0 0 0 2-1.5L21 7H7" />
               <circle cx="10" cy="20" r="1.6" />
@@ -108,7 +108,7 @@
 
     <script src="/js/config.js"></script>
     <script src="/js/data.js"></script>
-    <script src="/js/main.js"></script>
+    <script src="/js/common.js"></script>
     <script src="/js/product.js"></script>
   </body>
 </html>

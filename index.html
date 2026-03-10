@@ -10,6 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700&family=Unbounded:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <link rel="preload" as="image" href="/assets/banner-left.png" />
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
@@ -20,7 +21,7 @@
           <a href="/support/">Поддержка</a>
         </div>
         <a class="logo-link" href="/">
-          <img src="/assets/logo.png" alt="Логотип бренда" onerror="this.src='/assets/logo-placeholder.svg'" />
+          <img src="/assets/logo.png" alt="Логотип бренда" decoding="async" onerror="this.src='/assets/logo-placeholder.svg'" />
         </a>
         <div class="nav-right">
           <a class="social-link" href="https://www.instagram.com/overtn.brand/" target="_blank" rel="noopener noreferrer">
@@ -91,7 +92,7 @@
             </div>
           </div>
           <a class="footer-logo" href="/">
-            <img src="/assets/OVERTN2.png" alt="OVERTN" onerror="this.src='/assets/logo-placeholder.svg'" />
+            <img src="/assets/OVERTN2.png" alt="OVERTN" loading="lazy" decoding="async" onerror="this.src='/assets/logo-placeholder.svg'" />
           </a>
         </div>
       </div>
@@ -133,6 +134,7 @@
 
     <script src="/js/config.js"></script>
     <script src="/js/data.js"></script>
+    <script src="/js/common.js"></script>
     <script src="/js/main.js"></script>
   </body>
 </html>
