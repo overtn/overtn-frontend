@@ -280,4 +280,4 @@ const initProductPage = () => {
   }
 };
 
-window.addEventListener("DOMContentLoaded", initProductPage);
+initProductPage();

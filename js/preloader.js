@@ -7,6 +7,12 @@
     window.setTimeout(() => preloader.remove(), 420);
   };
 
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", hidePreloader, { once: true });
+  } else {
+    hidePreloader();
+  }
+
   window.addEventListener("load", hidePreloader, { once: true });
 
   if (document.readyState === "complete") {

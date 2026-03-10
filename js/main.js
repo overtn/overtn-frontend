@@ -147,5 +147,5 @@ const initHomePage = () => {
   syncHeroHeights();
 };
 
-window.addEventListener("DOMContentLoaded", initHomePage);
+initHomePage();
 window.addEventListener("resize", () => syncHeroHeights());

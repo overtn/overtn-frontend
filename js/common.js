@@ -204,6 +204,6 @@ const initCommonUi = () => {
   updateCartCount();
 };
 
-window.addEventListener("DOMContentLoaded", initCommonUi);
+initCommonUi();
 
 window.brandStore = { addToCart, getCart, setCart, updateCartCount, toggleCartDrawer, showToast, renderCartDrawer };
