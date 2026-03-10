@@ -781,7 +781,6 @@
 
       const selectHouseSuggestion = (item) => {
         selectedHouseSuggestion = item;
-        console.debug("house selected", item);
         houseInput.value = item.house || item.houseLabel || item.value || "";
         houseSuggestUnavailable = false;
         showHouseError("");
@@ -807,7 +806,6 @@
         }
         if (state.house.disabled) return;
         const q = normalizeQuery(houseInput.value);
-        console.debug("house request", { city: selectedCity.name, street: streetForQuery, q });
 
         scheduleLookup("house", async () => {
           const st = state.house;
@@ -822,7 +820,6 @@
             );
             if (requestId !== st.requestSeq) return;
             const rows = Array.isArray(result) ? result : (result.items || []);
-            console.debug("house response", { items: rows.length });
             const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
             if (meta.disabled) {
               houseSuggestUnavailable = true;
