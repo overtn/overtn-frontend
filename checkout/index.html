@@ -930,7 +930,7 @@
           pvzCode: method === "PVZ" ? selectedPvz.code : undefined,
           address: method === "COURIER" ? {
             street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
-            house: getSelectedHouseValue() || houseInput.value.trim(),
+            house: getSelectedHouseValue(),
             flat: flatInput.value.trim() || undefined,
           } : undefined,
           items,
@@ -1141,11 +1141,6 @@
           }
         }
 
-        const exactLocal = autoSelectByExactLabel(state.house.items, value);
-        if (exactLocal) {
-          selectHouseSuggestion(exactLocal);
-          return;
-        }
         showHouseError(state.house.items.length ? "Пожалуйста, выберите дом из подсказок." : "По вашему запросу ничего не найдено.");
         selectedHouseSuggestion = null;
         validateForm();
@@ -1250,7 +1245,7 @@
         } else {
           payload.address = {
             street: extractStreetOnly(selectedStreetSuggestion?.streetOnly || selectedStreetSuggestion?.street || streetInput.value.trim()),
-            house: getSelectedHouseValue() || houseInput.value.trim(),
+            house: getSelectedHouseValue(),
             flat: flatInput.value.trim() || undefined,
             suggestion: (selectedStreetSuggestion || selectedHouseSuggestion)
               ? {
