@@ -759,6 +759,9 @@
       const loadStreetSuggestions = () => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.street.disabled) return;
         const q = normalizeQuery(streetInput.value);
+        const fallbackStreetQuery = !q && selectedCity?.name
+          ? Array.from(selectedCity.name.trim())[0] || ""
+          : "";
 
         scheduleLookup("street", async () => {
           const st = state.street;
@@ -767,9 +770,14 @@
           if (st.controller) st.controller.abort();
           st.controller = new AbortController();
           try {
-            const result = await window.apiRequest(`/api/v1/shipping/address-suggest?q=${encodeURIComponent(q)}&city=${encodeURIComponent(selectedCity.name)}&mode=street`, { signal: st.controller.signal });
+            const fetchStreetResult = async (queryValue) => window.apiRequest(
+              `/api/v1/shipping/address-suggest?q=${encodeURIComponent(queryValue)}&city=${encodeURIComponent(selectedCity.name)}&mode=street`,
+              { signal: st.controller.signal },
+            );
+
+            let result = await fetchStreetResult(q);
             if (requestId !== st.requestSeq) return;
-            const rows = Array.isArray(result) ? result : (result.items || []);
+            let rows = Array.isArray(result) ? result : (result.items || []);
             const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
             if (meta.disabled) {
               streetSuggestUnavailable = true;
@@ -781,6 +789,13 @@
               hideAutocomplete("street");
               return;
             }
+
+            if (!rows.length && fallbackStreetQuery) {
+              result = await fetchStreetResult(fallbackStreetQuery);
+              if (requestId !== st.requestSeq) return;
+              rows = Array.isArray(result) ? result : (result.items || []);
+            }
+
             streetSuggestUnavailable = false;
             st.disabled = false;
             streetHint.hidden = true;

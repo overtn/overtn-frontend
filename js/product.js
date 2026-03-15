@@ -267,17 +267,6 @@ const initProductPage = () => {
   initTabs();
   initZoom();
   window.brandStore?.updateCartCount();
-  const cartBtn = document.querySelector("[data-cart-toggle]");
-  if (cartBtn) {
-    cartBtn.addEventListener("click", () => {
-      if (window.brandStore?.toggleCartDrawer) {
-        window.brandStore.toggleCartDrawer();
-      } else {
-        document.querySelector(".cart-drawer")?.classList.toggle("active");
-        document.querySelector(".cart-overlay")?.classList.toggle("active");
-      }
-    });
-  }
 };
 
 initProductPage();
