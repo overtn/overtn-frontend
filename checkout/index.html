@@ -756,12 +756,13 @@
         validateForm();
       };
 
-      const loadStreetSuggestions = () => {
+      const loadStreetSuggestions = ({ forceSeed = false } = {}) => {
         if (getShippingMethod() !== "COURIER" || !selectedCity?.name || state.street.disabled) return;
         const q = normalizeQuery(streetInput.value);
-        const fallbackStreetQuery = !q && selectedCity?.name
+        const seededStreetQuery = !q && selectedCity?.name
           ? Array.from(selectedCity.name.trim())[0] || ""
           : "";
+        const requestQuery = q || (forceSeed ? seededStreetQuery : "");
 
         scheduleLookup("street", async () => {
           const st = state.street;
@@ -775,7 +776,7 @@
               { signal: st.controller.signal },
             );
 
-            let result = await fetchStreetResult(q);
+            let result = await fetchStreetResult(requestQuery);
             if (requestId !== st.requestSeq) return;
             let rows = Array.isArray(result) ? result : (result.items || []);
             const meta = (result && !Array.isArray(result)) ? (result.meta || {}) : {};
@@ -790,8 +791,8 @@
               return;
             }
 
-            if (!rows.length && fallbackStreetQuery) {
-              result = await fetchStreetResult(fallbackStreetQuery);
+            if (!rows.length && !q && seededStreetQuery && requestQuery !== seededStreetQuery) {
+              result = await fetchStreetResult(seededStreetQuery);
               if (requestId !== st.requestSeq) return;
               rows = Array.isArray(result) ? result : (result.items || []);
             }
@@ -809,7 +810,7 @@
             setAutocompleteData("street", []);
             hideAutocomplete("street");
           }
-        }, 320);
+        }, forceSeed ? 0 : 320);
       };
 
       const selectHouseSuggestion = (item) => {
@@ -1405,7 +1406,7 @@
         setInputClearState(streetInput, streetClearBtn);
         validateForm();
       });
-      streetInput.addEventListener("focus", loadStreetSuggestions);
+      streetInput.addEventListener("focus", () => loadStreetSuggestions({ forceSeed: true }));
       streetInput.addEventListener("blur", () => {
         touched.street = true;
         setTimeout(() => {
