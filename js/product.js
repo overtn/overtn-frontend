@@ -152,6 +152,7 @@ const initZoom = () => {
     if (!item) return;
     modalImage.src = item.dataset.zoom || item.src;
     modalImage.alt = item.alt || "Zoom";
+    modalImage.style.transform = "translateX(0)";
   };
 
   const openZoom = (index) => {
@@ -196,6 +197,9 @@ const initZoom = () => {
     incomingImage.src = nextItem?.dataset.zoom || nextItem?.src || "";
     incomingImage.alt = nextItem?.alt || "Zoom";
     incomingImage.style.transform = `translateX(${inX}%)`;
+    incomingImage.style.position = "absolute";
+    incomingImage.style.inset = "0";
+    incomingImage.style.margin = "auto";
     modalImage.parentElement?.appendChild(incomingImage);
 
     Promise.all([
