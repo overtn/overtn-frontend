@@ -541,6 +541,11 @@ a {
   align-items: center;
 }
 
+.cart-header strong {
+  font-size: 16px;
+  font-weight: 400;
+}
+
 .cart-close {
   width: 34px;
   height: 34px;
@@ -556,7 +561,7 @@ a {
   gap: 12px;
   align-items: center;
   font-size: 14px;
-  color: var(--text-muted);
+  color: #000000;
 }
 
 [data-cart-items] {
@@ -607,6 +612,12 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.cart-summary span,
+.cart-summary strong {
+  font-weight: 400;
+  color: var(--text);
 }
 
 .cart-summary.empty span {
