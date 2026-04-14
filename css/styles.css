@@ -751,7 +751,7 @@ a {
 .size-label {
   margin: 0 0 10px;
   color: var(--text);
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0;
 }
 
@@ -794,11 +794,13 @@ a {
 
 .cta.narrow {
   align-self: flex-start;
+  width: 244px;
   padding: 12px 18px;
   background: rgba(20, 16, 14, 0.1);
   color: var(--text);
   border: 1px solid rgba(20, 16, 14, 0.2);
   letter-spacing: 0;
+  text-transform: none;
 }
 
 .cta.narrow:hover {
