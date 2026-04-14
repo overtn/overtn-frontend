@@ -751,7 +751,7 @@ a {
 .size-label {
   margin: 0 0 10px;
   color: var(--text);
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: 0;
 }
 
@@ -836,7 +836,7 @@ a {
   border: none;
   border-radius: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: #000000;
   font-size: 16px;
   line-height: 1.6;
 }
