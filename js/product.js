@@ -200,17 +200,24 @@ const initZoom = () => {
     incomingImage.style.position = "absolute";
     incomingImage.style.inset = "0";
     incomingImage.style.margin = "auto";
+    incomingImage.style.width = "100%";
+    incomingImage.style.height = "100%";
+    incomingImage.style.objectFit = "contain";
+    incomingImage.style.objectPosition = "center";
     modalImage.parentElement?.appendChild(incomingImage);
 
+    const outgoingAnimation = modalImage.animate(
+      [{ transform: "translateX(0)" }, { transform: `translateX(${outX}%)` }],
+      { duration: 180, easing: "ease-out", fill: "forwards" }
+    );
+    const incomingAnimation = incomingImage.animate(
+      [{ transform: `translateX(${inX}%)` }, { transform: "translateX(0)" }],
+      { duration: 180, easing: "ease-out", fill: "forwards" }
+    );
+
     Promise.all([
-      modalImage.animate(
-        [{ transform: "translateX(0)" }, { transform: `translateX(${outX}%)` }],
-        { duration: 180, easing: "ease-out", fill: "forwards" }
-      ).finished,
-      incomingImage.animate(
-        [{ transform: `translateX(${inX}%)` }, { transform: "translateX(0)" }],
-        { duration: 180, easing: "ease-out", fill: "forwards" }
-      ).finished
+      outgoingAnimation.finished,
+      incomingAnimation.finished
     ])
       .then(() => {
         currentIndex = nextIndex;
@@ -221,6 +228,8 @@ const initZoom = () => {
         renderIndex();
       })
       .finally(() => {
+        outgoingAnimation.cancel();
+        incomingAnimation.cancel();
         incomingImage.remove();
         modalImage.style.transform = "";
         isZoomAnimating = false;
