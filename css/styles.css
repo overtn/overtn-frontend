@@ -748,6 +748,13 @@ a {
   font-family: var(--font-display);
 }
 
+.size-label {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
 .size-picker {
   display: flex;
   gap: 10px;
@@ -791,6 +798,7 @@ a {
   background: rgba(20, 16, 14, 0.1);
   color: var(--text);
   border: 1px solid rgba(20, 16, 14, 0.2);
+  letter-spacing: 0;
 }
 
 .cta.narrow:hover {
@@ -824,11 +832,13 @@ a {
 
 .tab-content {
   margin-top: 16px;
-  padding: 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(20, 16, 14, 0.18);
-  background: rgba(20, 16, 14, 0.03);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .toast {
