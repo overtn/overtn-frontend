@@ -344,6 +344,10 @@ a {
   letter-spacing: 0.08em;
 }
 
+#products.section-title {
+  letter-spacing: 0;
+}
+
 .products {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 0.95fr));
