@@ -13,6 +13,8 @@
   --radius-sm: 18px;
   --shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
   --max: 100%;
+  --font-body: "Manrope", "Helvetica Neue", sans-serif;
+  --font-display: "Unbounded", "Helvetica Neue", sans-serif;
 }
 
 * {
@@ -25,7 +27,7 @@ html {
 
 body {
   margin: 0;
-  font-family: "Manrope", "Helvetica Neue", sans-serif;
+  font-family: var(--font-body);
   color: var(--text);
   background: radial-gradient(900px 700px at 12% 5%, rgba(210, 98, 78, 0.12), transparent 60%),
     radial-gradient(1000px 700px at 90% 0%, rgba(178, 68, 54, 0.08), transparent 55%),
@@ -36,6 +38,13 @@ body {
 img {
   max-width: 100%;
   display: block;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 a {
@@ -204,7 +213,7 @@ a {
 }
 
 .hero-main h1 {
-  font-family: "Unbounded", "Helvetica Neue", sans-serif;
+  font-family: var(--font-display);
   font-size: clamp(30px, 3vw, 52px);
   letter-spacing: 0.04em;
   margin: 0;
@@ -328,7 +337,7 @@ a {
 
 .section-title {
   margin: 70px 0 26px;
-  font-family: "Unbounded", "Helvetica Neue", sans-serif;
+  font-family: var(--font-display);
   font-size: 28px;
   letter-spacing: 0.08em;
 }
@@ -639,7 +648,7 @@ a {
 }
 
 .page-hero h1 {
-  font-family: "Unbounded", "Helvetica Neue", sans-serif;
+  font-family: var(--font-display);
 }
 
 .back-link {
@@ -719,7 +728,7 @@ a {
 
 .product-details h2 {
   margin: 0;
-  font-family: "Unbounded", "Helvetica Neue", sans-serif;
+  font-family: var(--font-display);
 }
 
 .size-picker {
@@ -982,7 +991,7 @@ a {
 
 .checkout-topbar h1 {
   margin: 0;
-  font-family: "Unbounded", "Helvetica Neue", sans-serif;
+  font-family: var(--font-display);
   font-size: clamp(20px, 2.4vw, 34px);
 }
 
@@ -1207,7 +1216,7 @@ a {
 
 .checkout-card h1 {
   margin-top: 0;
-  font-family: "Unbounded", "Helvetica Neue", sans-serif;
+  font-family: var(--font-display);
 }
 
 .form-row {
