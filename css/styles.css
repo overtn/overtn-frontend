@@ -250,6 +250,7 @@ a {
 .hero-main .cta {
   margin-top: auto;
   font-size: 13px;
+  letter-spacing: 0.04em;
 }
 
 .hero-slider {
