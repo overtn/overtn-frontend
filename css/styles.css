@@ -85,7 +85,7 @@ a {
   gap: 16px;
   font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
 }
 
 .nav-left a {
