@@ -436,12 +436,12 @@
               <div class="checkout-item-head">
                 <strong>${item.name}</strong>
                 <div class="checkout-item-prices">
-                  <span>${formatRub(Number(item.numericPrice || 0))} × ${item.qty}</span>
                   <span>${formatRub(lineTotal)}</span>
                 </div>
               </div>
               <div class="checkout-item-actions">
                 <button type="button" data-action="decrease">−</button>
+                <span class="checkout-item-qty">${item.qty}</span>
                 <button type="button" data-action="increase">+</button>
                 <button type="button" data-action="remove">Удалить</button>
               </div>
