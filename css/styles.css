@@ -1350,6 +1350,11 @@ a {
   margin-bottom: 16px;
 }
 
+.form-row > label:not(.radio-row):not(.checkbox-row) {
+  display: grid;
+  gap: 12px;
+}
+
 .form-row input {
   width: 100%;
   padding: 12px 14px;
