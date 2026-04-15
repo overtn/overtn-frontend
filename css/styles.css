@@ -1143,17 +1143,18 @@ a {
   background: transparent;
 }
 
-.city-row {
-  margin-bottom: 0;
-}
-
 .delivery-options:not([hidden]) {
-  margin-top: 12px;
-  margin-bottom: 12px;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .delivery-options:not([hidden]) .radio-row + .radio-row {
   margin-top: 6px;
+}
+
+.delivery-options > #pvzFlow:not([hidden]),
+.delivery-options > #courierFlow:not([hidden]) {
+  margin-top: 12px;
 }
 
 .radio-row {
@@ -1370,6 +1371,10 @@ a {
   display: grid;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.form-row.city-row {
+  margin-bottom: 12px;
 }
 
 .form-row > label:not(.radio-row):not(.checkbox-row) {
