@@ -844,7 +844,11 @@ a {
 }
 
 .product-description {
+  display: block;
   margin: 0;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .tabs button.active {
