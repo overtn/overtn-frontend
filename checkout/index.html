@@ -433,9 +433,13 @@
           return `<div class="checkout-item" data-item-id="${item.id}" data-item-size="${item.size || ""}">
             <img src="${item.image}" alt="${item.name}" loading="lazy" decoding="async" />
             <div class="checkout-item-meta">
-              <strong>${item.name}</strong>
-              <span>${formatRub(Number(item.numericPrice || 0))} × ${item.qty}</span>
-              <span><b>${formatRub(lineTotal)}</b></span>
+              <div class="checkout-item-head">
+                <strong>${item.name}</strong>
+                <div class="checkout-item-prices">
+                  <span>${formatRub(Number(item.numericPrice || 0))} × ${item.qty}</span>
+                  <span>${formatRub(lineTotal)}</span>
+                </div>
+              </div>
               <div class="checkout-item-actions">
                 <button type="button" data-action="decrease">−</button>
                 <button type="button" data-action="increase">+</button>
