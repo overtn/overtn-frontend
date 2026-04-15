@@ -1149,12 +1149,12 @@ a {
 }
 
 .delivery-options:not([hidden]) .radio-row + .radio-row {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .delivery-options > #pvzFlow:not([hidden]),
 .delivery-options > #courierFlow:not([hidden]) {
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .radio-row {
