@@ -748,10 +748,17 @@ a {
   font-family: var(--font-display);
 }
 
+.purchase-block {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: fit-content;
+}
+
 .size-label {
   margin: 0 0 10px;
   color: var(--text);
-  font-size: 16px;
+  font-size: inherit;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1;
@@ -796,7 +803,7 @@ a {
 
 .cta.narrow {
   align-self: flex-start;
-  width: 188px;
+  width: 100%;
   padding: 12px 18px;
   background: rgba(20, 16, 14, 0.1);
   color: var(--text);
