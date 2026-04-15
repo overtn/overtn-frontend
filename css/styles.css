@@ -1082,9 +1082,11 @@ a {
   gap: 12px;
 }
 
-.checkout-block h2 {
+.checkout-section-label {
   margin: 0;
-  font-size: 18px;
+  font-size: inherit;
+  font-weight: 400;
+  color: var(--text);
 }
 
 .phone-row {
