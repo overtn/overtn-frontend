@@ -752,7 +752,9 @@ a {
   margin: 0 0 10px;
   color: var(--text);
   font-size: 16px;
+  font-weight: 400;
   letter-spacing: 0;
+  line-height: 1;
 }
 
 .size-picker {
@@ -794,13 +796,15 @@ a {
 
 .cta.narrow {
   align-self: flex-start;
-  width: 244px;
+  width: 188px;
   padding: 12px 18px;
   background: rgba(20, 16, 14, 0.1);
   color: var(--text);
   border: 1px solid rgba(20, 16, 14, 0.2);
   letter-spacing: 0;
   text-transform: none;
+  justify-content: center;
+  text-align: center;
 }
 
 .cta.narrow:hover {
