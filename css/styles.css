@@ -1143,8 +1143,14 @@ a {
   background: transparent;
 }
 
+.city-row {
+  margin-bottom: 12px;
+}
+
 .delivery-options {
-  margin: 12px 0;
+  margin: 0;
+  display: grid;
+  row-gap: 12px;
 }
 
 .radio-row {
