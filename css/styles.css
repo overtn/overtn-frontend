@@ -1144,13 +1144,16 @@ a {
 }
 
 .city-row {
+  margin-bottom: 0;
+}
+
+.delivery-options:not([hidden]) {
+  margin-top: 12px;
   margin-bottom: 12px;
 }
 
-.delivery-options {
-  margin: 0;
-  display: grid;
-  row-gap: 12px;
+.delivery-options:not([hidden]) .radio-row + .radio-row {
+  margin-top: 6px;
 }
 
 .radio-row {

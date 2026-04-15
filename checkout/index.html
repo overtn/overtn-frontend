@@ -152,7 +152,7 @@
                     <label>Квартира/Офис <input type="text" name="flat" data-courier-flat /></label>
                   </div>
                 </div>
-                <div class="muted" data-shipping-quote>Выберите город и способ доставки.</div>
+                <div class="muted" data-shipping-quote></div>
               </div>
             </div>
 
@@ -966,7 +966,7 @@
         const payload = buildQuotePayload();
         if (!payload) {
           shippingQuote = null;
-          shippingQuoteEl.textContent = !selectedCity ? "Выберите город и способ доставки." : "";
+          shippingQuoteEl.textContent = "";
           rerenderSummary();
           validateForm();
           return;
