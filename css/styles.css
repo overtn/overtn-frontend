@@ -1149,7 +1149,7 @@ a {
 }
 
 .delivery-options:not([hidden]) .radio-row + .radio-row {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .delivery-options > #pvzFlow:not([hidden]),
@@ -1374,7 +1374,7 @@ a {
 }
 
 .form-row.city-row {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .form-row > label:not(.radio-row):not(.checkbox-row) {
