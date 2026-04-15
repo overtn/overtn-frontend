@@ -1143,11 +1143,15 @@ a {
   background: transparent;
 }
 
+.delivery-options {
+  margin: 12px 0;
+}
+
 .radio-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: inherit;
 }
 
 .form-inline {
