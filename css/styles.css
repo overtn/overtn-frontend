@@ -1260,6 +1260,16 @@ a {
   cursor: pointer;
 }
 
+.checkout-item-actions button[data-action="decrease"],
+.checkout-item-actions button[data-action="increase"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .checkout-summary {
   margin-top: 18px;
   padding-top: 14px;
@@ -1306,7 +1316,7 @@ a {
 }
 
 .checkout-total {
-  margin-top: 4px;
+  margin-top: 12px;
 }
 
 .checkout-total span,
