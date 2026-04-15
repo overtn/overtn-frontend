@@ -1090,7 +1090,7 @@ a {
 .phone-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   padding: 0 14px;
 }
 
