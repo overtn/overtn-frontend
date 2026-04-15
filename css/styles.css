@@ -1090,13 +1090,16 @@ a {
 .phone-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 0 14px;
 }
 
 .phone-prefix {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
   color: var(--text);
-  font-weight: 600;
 }
 
 .phone-row input {
