@@ -1117,6 +1117,10 @@ a {
   padding: 0 12px;
 }
 
+.city-field {
+  gap: 0;
+}
+
 .search-icon {
   display: inline-flex;
   align-items: center;
