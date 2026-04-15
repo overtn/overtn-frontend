@@ -520,8 +520,13 @@
 
         const hasItems = visible.length > 0;
         const sourceValue = isCity ? cityInput.value : (isStreet ? streetInput.value : (isHouse ? houseInput.value : pvzInput.value));
-        emptyEl.hidden = hasItems || normalizeQuery(sourceValue).length === 0;
-        dropdownEl.hidden = !hasItems && emptyEl.hidden;
+        if (hasItems) {
+          emptyEl.hidden = true;
+          dropdownEl.hidden = false;
+          return;
+        }
+        emptyEl.hidden = normalizeQuery(sourceValue).length === 0;
+        dropdownEl.hidden = emptyEl.hidden;
       };
 
       const hideAutocomplete = (key) => {
