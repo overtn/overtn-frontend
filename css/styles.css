@@ -753,12 +753,13 @@ a {
   flex-direction: column;
   align-items: stretch;
   width: fit-content;
+  gap: 10px;
 }
 
 .size-label {
-  margin: 0 0 10px;
+  margin: 0;
   color: var(--text);
-  font-size: inherit;
+  font-size: 13px;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1;
@@ -776,6 +777,7 @@ a {
   border: 1px solid rgba(20, 16, 14, 0.2);
   background: rgba(20, 16, 14, 0.015);
   color: var(--text);
+  font-size: 13px;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
@@ -808,6 +810,7 @@ a {
   background: rgba(20, 16, 14, 0.1);
   color: var(--text);
   border: 1px solid rgba(20, 16, 14, 0.2);
+  font-size: 13px;
   letter-spacing: 0;
   text-transform: none;
   justify-content: center;
@@ -836,7 +839,12 @@ a {
   border: 1px solid rgba(20, 16, 14, 0.2);
   background: rgba(20, 16, 14, 0.01);
   color: var(--text);
+  font-size: 13px;
   cursor: pointer;
+}
+
+.product-description {
+  margin: 0;
 }
 
 .tabs button.active {
