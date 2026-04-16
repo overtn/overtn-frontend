@@ -90,7 +90,7 @@
                   <input type="radio" name="shippingMethod" value="PVZ" data-shipping-method disabled />
                   <span>СДЭК — до пункта выдачи</span>
                 </label>
-                <label class="radio-row">
+                <label class="radio-row" hidden>
                   <input type="radio" name="shippingMethod" value="COURIER" data-shipping-method disabled />
                   <span>СДЭК — курьером до двери</span>
                 </label>
@@ -115,6 +115,7 @@
                     <div class="muted" data-pvz-info-text></div>
                     <button type="button" class="pvz-change-link" data-pvz-change>Изменить</button>
                   </div>
+                  <div id="cdek-widget-slot" class="cdek-widget-slot" data-cdek-widget-slot></div>
                 </div>
                 <div id="courierFlow" class="form-row" data-courier-fields hidden>
                   <div class="form-inline">
