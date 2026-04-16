@@ -1162,6 +1162,11 @@ a {
   align-items: center;
   gap: 10px;
   font-size: inherit;
+  flex-wrap: wrap;
+}
+
+.delivery-quote-inline {
+  color: var(--text-muted);
 }
 
 .form-inline {
