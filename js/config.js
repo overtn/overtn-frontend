@@ -1,6 +1,6 @@
 window.APP_CONFIG = {
   API_BASE_URL: "https://overtn-backend.onrender.com",
-  YANDEX_MAPS_API_KEY: "",
+  YANDEX_MAPS_API_KEY: "637834d8-c3a6-4c2d-a00c-75e578cebcad",
 };
 
 window.apiRequest = async (path, options = {}) => {
