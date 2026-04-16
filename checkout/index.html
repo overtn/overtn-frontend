@@ -111,7 +111,7 @@
                     <div class="muted" data-pvz-info-text></div>
                     <button type="button" class="pvz-change-link" data-pvz-change>Изменить</button>
                   </div>
-                  <div id="cdek-widget-slot" class="cdek-widget-slot" data-cdek-widget-slot hidden></div>
+                  <div id="cdek-widget-slot" class="pvz-map-slot" data-pvz-map-slot hidden></div>
                 </div>
                 <div id="courierFlow" class="form-row" data-courier-fields hidden>
                   <div class="form-inline">
@@ -250,7 +250,7 @@
       const houseErrorEl = document.querySelector("[data-house-error]");
       const flatInput = document.querySelector("[data-courier-flat]");
 
-      const widgetSlot = document.querySelector("[data-cdek-widget-slot]");
+      const mapSlot = document.querySelector("[data-pvz-map-slot]");
       const yandexMapsApiKey = window.APP_CONFIG.YANDEX_MAPS_API_KEY || "";
       const pvzMapState = {
         scriptPromise: null,
@@ -707,15 +707,20 @@
         renderAutocomplete(key);
       };
 
-      const setPvzMapFallback = (message) => {
-        if (!widgetSlot) return;
-        showBlock(widgetSlot);
-        widgetSlot.innerHTML = `<div class="cdek-widget-fallback muted">${message}</div>`;
+      const ensurePvzMapCanvas = () => {
+        if (!mapSlot) return null;
+        let canvas = getPvzMapCanvas();
+        if (!canvas) {
+          mapSlot.innerHTML = '<div class="pvz-map-canvas" data-pvz-map-canvas></div>';
+          canvas = getPvzMapCanvas();
+        }
+        return canvas;
       };
 
-      const clearPvzMapFallback = () => {
-        if (!widgetSlot) return;
-        widgetSlot.innerHTML = '<div class="cdek-map-canvas" data-cdek-map-canvas></div>';
+      const setPvzMapFallback = (message) => {
+        if (!mapSlot) return;
+        mapSlot.innerHTML = `<div class="pvz-map-fallback muted">${message}</div>`;
+        showBlock(mapSlot);
       };
 
       const hasYandexMapsKey = () => Boolean(yandexMapsApiKey);
@@ -747,24 +752,26 @@
         return pvzMapState.readyPromise;
       };
 
-      const getPvzMapCanvas = () => widgetSlot?.querySelector('[data-cdek-map-canvas]');
+      const getPvzMapCanvas = () => mapSlot?.querySelector('[data-pvz-map-canvas]');
 
       const fetchPvzPointsForMap = async () => {
         if (!selectedCity?.code) return [];
         const rows = await window.apiRequest(`/api/v1/shipping/cdek/pvz?cityCode=${encodeURIComponent(selectedCity.code)}&q=&size=200`);
-        const mapped = mapPvzRows(rows).filter((row) => row.geo && Number.isFinite(Number(row.geo.lat)) && Number.isFinite(Number(row.geo.lon)));
-        const nextItems = [...state.pvz.items.filter((item) => item.code && !mapped.some((row) => row.code === item.code)), ...mapped];
-        setAutocompleteData('pvz', nextItems);
-        return mapped;
+        const mapped = mapPvzRows(rows);
+        const merged = [
+          ...state.pvz.items.filter((item) => item.code && !mapped.some((row) => row.code === item.code)),
+          ...mapped,
+        ];
+        setAutocompleteData('pvz', merged);
+        return mapped.filter((row) => row.geo && Number.isFinite(Number(row.geo.lat)) && Number.isFinite(Number(row.geo.lon)));
       };
 
       const ensurePvzMap = async () => {
-        if (!widgetSlot) return null;
+        if (!mapSlot) return null;
         const ymaps = await loadYandexMapsApi();
         if (!pvzMapState.map) {
-          clearPvzMapFallback();
-          showBlock(widgetSlot);
-          const canvas = getPvzMapCanvas();
+          showBlock(mapSlot);
+          const canvas = ensurePvzMapCanvas();
           if (!canvas) throw new Error('PVZ map canvas is unavailable');
           pvzMapState.map = new ymaps.Map(canvas, {
             center: [55.751244, 37.618423],
@@ -790,20 +797,30 @@
         const title = pvz.name || pvz.code || 'Пункт выдачи';
         const address = pvz.address || pvz.label || '';
         return `
-          <div class="cdek-map-balloon">
+          <div class="pvz-map-balloon">
             <strong>${title}</strong>
             <div>${address}</div>
-            <button type="button" class="cdek-map-select" data-map-pvz-select="${pvz.code}">Выбрать</button>
+            <button type="button" class="pvz-map-select" data-map-pvz-select="${pvz.code}">Выбрать</button>
           </div>
         `;
       };
 
-      const syncPvzMapSelection = () => {
+      const focusPvzPlacemark = (code, { openBalloon = false } = {}) => {
+        if (!code || !pvzMapState.map) return;
+        const placemark = pvzMapState.placemarks.get(code);
+        if (!placemark) return;
+        const coords = placemark.geometry?.getCoordinates?.();
+        if (coords) pvzMapState.map.panTo(coords, { flying: false, duration: 180 });
+        if (openBalloon) placemark.balloon.open();
+      };
+
+      const syncPvzMapSelection = ({ openBalloon = false } = {}) => {
         if (!pvzMapState.placemarks.size) return;
         pvzMapState.selectedCode = selectedPvz?.code || null;
         pvzMapState.placemarks.forEach((placemark, code) => {
           placemark.options.set('preset', getPlacemarkPreset(code));
         });
+        if (pvzMapState.selectedCode) focusPvzPlacemark(pvzMapState.selectedCode, { openBalloon });
       };
 
       const applySelectedPvz = (pvz) => {
@@ -811,7 +828,7 @@
         const nextItems = [...state.pvz.items.filter((item) => item.code !== pvz.code), pvz];
         setAutocompleteData('pvz', nextItems);
         selectPvz(pvz);
-        syncPvzMapSelection();
+        syncPvzMapSelection({ openBalloon: true });
       };
 
       const renderPvzMapPoints = async () => {
@@ -845,6 +862,10 @@
             checkZoomRange: true,
             zoomMargin: 24,
           });
+        } else {
+          destroyPvzMap();
+          setPvzMapFallback('Для выбранного города пока не удалось загрузить точки ПВЗ. Выберите пункт выдачи через список.');
+          return;
         }
         syncPvzMapSelection();
       };
@@ -857,30 +878,29 @@
         pvzMapState.items = [];
         pvzMapState.cityCode = null;
         pvzMapState.selectedCode = null;
-        if (widgetSlot) {
-          widgetSlot.innerHTML = '';
-          hideBlock(widgetSlot);
+        if (mapSlot) {
+          mapSlot.innerHTML = '';
+          hideBlock(mapSlot);
         }
       };
 
       const syncPvzMap = async () => {
-        if (!widgetSlot) return;
+        if (!mapSlot) return;
         if (!selectedCity?.name || getShippingMethod() !== 'PVZ' || pvzFlow.hidden) {
           destroyPvzMap();
           return;
         }
 
-        showBlock(widgetSlot);
+        showBlock(mapSlot);
 
         if (!hasYandexMapsKey()) {
+          destroyPvzMap();
           setPvzMapFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
           return;
         }
 
         try {
           await ensurePvzMap();
-          clearPvzMapFallback();
-          showBlock(widgetSlot);
           if (pvzMapState.cityCode !== selectedCity.code || !pvzMapState.placemarks.size) {
             await renderPvzMapPoints();
           } else {
@@ -1552,7 +1572,7 @@
         if (item) selectHouseSuggestion(item);
       });
 
-      widgetSlot?.addEventListener("click", (event) => {
+      mapSlot?.addEventListener("click", (event) => {
         const target = event.target.closest("[data-map-pvz-select]");
         if (!target) return;
         const code = target.getAttribute("data-map-pvz-select") || "";
