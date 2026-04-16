@@ -598,9 +598,11 @@
         if (selectedPvz?.code) {
           hideBlock(pvzFields);
           showBlock(pvzInfoWrap);
+          hideBlock(mapSlot);
         } else {
           showBlock(pvzFields);
           hideBlock(pvzInfoWrap);
+          if (mapSlot?.innerHTML.trim()) showBlock(mapSlot);
         }
       };
 
@@ -696,6 +698,7 @@
         void requestQuote();
         validateForm();
         syncPvzMapSelection();
+        hideBlock(mapSlot);
       };
 
       const setAutocompleteData = (key, rows) => {
@@ -762,7 +765,11 @@
           ...state.pvz.items.filter((item) => item.code && !mapped.some((row) => row.code === item.code)),
           ...mapped,
         ];
-        setAutocompleteData('pvz', merged);
+        state.pvz.items = merged;
+        state.pvz.filtered = merged;
+        state.pvz.visibleCount = 20;
+        state.pvz.activeIndex = merged.length ? 0 : -1;
+        hideAutocomplete('pvz');
         return mapped.filter((row) => row.geo && Number.isFinite(Number(row.geo.lat)) && Number.isFinite(Number(row.geo.lon)));
       };
 
