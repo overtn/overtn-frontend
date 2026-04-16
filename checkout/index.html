@@ -251,11 +251,16 @@
       const flatInput = document.querySelector("[data-courier-flat]");
 
       const widgetSlot = document.querySelector("[data-cdek-widget-slot]");
-      const cdekWidgetConfig = window.APP_CONFIG.CDEK_WIDGET || {};
-      const cdekWidgetState = {
+      const yandexMapsApiKey = window.APP_CONFIG.YANDEX_MAPS_API_KEY || "";
+      const pvzMapState = {
         scriptPromise: null,
-        instance: null,
+        readyPromise: null,
+        map: null,
+        clusterer: null,
+        placemarks: new Map(),
+        items: [],
         cityCode: null,
+        selectedCode: null,
       };
 
       const consentInput = document.querySelector("[data-consent]");
@@ -673,7 +678,7 @@
         hideAutocomplete("city");
         showShippingError("");
         syncShippingFields();
-        void syncCdekWidget();
+        void syncPvzMap();
         setInputClearState(cityInput, cityClearBtn);
         validateForm();
       };
@@ -690,6 +695,7 @@
         rerenderSummary();
         void requestQuote();
         validateForm();
+        syncPvzMapSelection();
       };
 
       const setAutocompleteData = (key, rows) => {
@@ -701,149 +707,188 @@
         renderAutocomplete(key);
       };
 
-      const setWidgetFallback = (message) => {
+      const setPvzMapFallback = (message) => {
         if (!widgetSlot) return;
         showBlock(widgetSlot);
         widgetSlot.innerHTML = `<div class="cdek-widget-fallback muted">${message}</div>`;
       };
 
-      const clearWidgetFallback = () => {
+      const clearPvzMapFallback = () => {
         if (!widgetSlot) return;
-        widgetSlot.innerHTML = "";
+        widgetSlot.innerHTML = '<div class="cdek-map-canvas" data-cdek-map-canvas></div>';
       };
 
-      const hasWidgetConfig = () => Boolean(cdekWidgetConfig.apiKey && cdekWidgetConfig.servicePath);
+      const hasYandexMapsKey = () => Boolean(yandexMapsApiKey);
 
-      const loadCdekWidgetScript = () => {
-        if (window.CDEKWidget) return Promise.resolve(window.CDEKWidget);
-        if (cdekWidgetState.scriptPromise) return cdekWidgetState.scriptPromise;
-        cdekWidgetState.scriptPromise = new Promise((resolve, reject) => {
-          const existing = document.querySelector('script[data-cdek-widget-script]');
-          if (existing) {
-            existing.addEventListener('load', () => resolve(window.CDEKWidget), { once: true });
-            existing.addEventListener('error', () => reject(new Error('CDEK widget script failed to load')), { once: true });
-            return;
-          }
-          const script = document.createElement('script');
-          script.src = cdekWidgetConfig.scriptUrl || 'https://cdn.jsdelivr.net/gh/cdek-it/widget@3/dist/cdek-widget.umd.js';
-          script.async = true;
-          script.dataset.cdekWidgetScript = 'true';
-          script.onload = () => resolve(window.CDEKWidget);
-          script.onerror = () => reject(new Error('CDEK widget script failed to load'));
-          document.head.appendChild(script);
-        });
-        return cdekWidgetState.scriptPromise;
+      const loadYandexMapsApi = async () => {
+        if (window.ymaps?.ready) return window.ymaps;
+        if (!hasYandexMapsKey()) throw new Error('YANDEX_MAPS_API_KEY is missing');
+        if (!pvzMapState.scriptPromise) {
+          pvzMapState.scriptPromise = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-yandex-maps-script]');
+            if (existing) {
+              existing.addEventListener('load', () => resolve(window.ymaps), { once: true });
+              existing.addEventListener('error', () => reject(new Error('Yandex Maps script failed to load')), { once: true });
+              return;
+            }
+            const script = document.createElement('script');
+            script.src = `https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(yandexMapsApiKey)}&lang=ru_RU`;
+            script.async = true;
+            script.dataset.yandexMapsScript = 'true';
+            script.onload = () => resolve(window.ymaps);
+            script.onerror = () => reject(new Error('Yandex Maps script failed to load'));
+            document.head.appendChild(script);
+          });
+        }
+        const ymaps = await pvzMapState.scriptPromise;
+        if (!pvzMapState.readyPromise) {
+          pvzMapState.readyPromise = new Promise((resolve) => ymaps.ready(() => resolve(ymaps)));
+        }
+        return pvzMapState.readyPromise;
       };
 
-      const buildWidgetParcels = () => {
-        const cart = getCart();
-        if (!cart.length) return [{ weight: 1000, length: 40, width: 30, height: 10 }];
-        const totalQty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 1;
-        return [{
-          weight: 1000,
-          length: 40,
-          width: 30,
-          height: Math.min(25, 10 + Math.max(totalQty - 1, 0) * 4),
-        }];
-      };
+      const getPvzMapCanvas = () => widgetSlot?.querySelector('[data-cdek-map-canvas]');
 
-      const upsertPvzFromWidget = (address, tariff) => {
-        if (!address?.code) return;
-        const widgetPvz = {
-          code: String(address.code),
-          name: address.name || address.address || String(address.code),
-          address: address.address || '',
-          city: address.city || selectedCity?.name || '',
-          postalCode: address.postal_code || undefined,
-          workTime: address.work_time || undefined,
-          geo: Array.isArray(address.location) && address.location.length === 2
-            ? { lat: Number(address.location[1]), lon: Number(address.location[0]) }
-            : undefined,
-          type: address.type || undefined,
-          label: [address.name, address.address].filter(Boolean).join(' — ') || String(address.code),
-        };
-        const nextItems = [...state.pvz.items.filter((item) => item.code !== widgetPvz.code), widgetPvz];
+      const fetchPvzPointsForMap = async () => {
+        if (!selectedCity?.code) return [];
+        const rows = await window.apiRequest(`/api/v1/shipping/cdek/pvz?cityCode=${encodeURIComponent(selectedCity.code)}&q=&size=200`);
+        const mapped = mapPvzRows(rows).filter((row) => row.geo && Number.isFinite(Number(row.geo.lat)) && Number.isFinite(Number(row.geo.lon)));
+        const nextItems = [...state.pvz.items.filter((item) => item.code && !mapped.some((row) => row.code === item.code)), ...mapped];
         setAutocompleteData('pvz', nextItems);
-        if (tariff?.delivery_sum) {
-          shippingQuote = {
-            ...(shippingQuote || {}),
-            shippingCostMinor: Math.round(Number(tariff.delivery_sum || 0) * 100),
-            deliveryDaysMin: tariff.period_min,
-            deliveryDaysMax: tariff.period_max,
-            serviceName: tariff.tariff_name || shippingQuote?.serviceName || '',
-            tariffCode: tariff.tariff_code || shippingQuote?.tariffCode || undefined,
-          };
-        }
-        selectPvz(widgetPvz);
+        return mapped;
       };
 
-      const destroyCdekWidget = () => {
-        if (cdekWidgetState.instance?.destroy) {
-          cdekWidgetState.instance.destroy();
+      const ensurePvzMap = async () => {
+        if (!widgetSlot) return null;
+        const ymaps = await loadYandexMapsApi();
+        if (!pvzMapState.map) {
+          clearPvzMapFallback();
+          showBlock(widgetSlot);
+          const canvas = getPvzMapCanvas();
+          if (!canvas) throw new Error('PVZ map canvas is unavailable');
+          pvzMapState.map = new ymaps.Map(canvas, {
+            center: [55.751244, 37.618423],
+            zoom: 10,
+            controls: ['zoomControl'],
+          }, {
+            suppressMapOpenBlock: true,
+          });
+          pvzMapState.clusterer = new ymaps.Clusterer({
+            clusterDisableClickZoom: false,
+            groupByCoordinates: false,
+          });
+          pvzMapState.map.geoObjects.add(pvzMapState.clusterer);
         }
-        cdekWidgetState.instance = null;
-        cdekWidgetState.cityCode = null;
+        return ymaps;
+      };
+
+      const getPlacemarkPreset = (code) => code && code === pvzMapState.selectedCode
+        ? 'islands#redDotIcon'
+        : 'islands#darkOrangeDotIcon';
+
+      const buildPvzMapBalloon = (pvz) => {
+        const title = pvz.name || pvz.code || 'Пункт выдачи';
+        const address = pvz.address || pvz.label || '';
+        return `
+          <div class="cdek-map-balloon">
+            <strong>${title}</strong>
+            <div>${address}</div>
+            <button type="button" class="cdek-map-select" data-map-pvz-select="${pvz.code}">Выбрать</button>
+          </div>
+        `;
+      };
+
+      const syncPvzMapSelection = () => {
+        if (!pvzMapState.placemarks.size) return;
+        pvzMapState.selectedCode = selectedPvz?.code || null;
+        pvzMapState.placemarks.forEach((placemark, code) => {
+          placemark.options.set('preset', getPlacemarkPreset(code));
+        });
+      };
+
+      const applySelectedPvz = (pvz) => {
+        if (!pvz?.code) return;
+        const nextItems = [...state.pvz.items.filter((item) => item.code !== pvz.code), pvz];
+        setAutocompleteData('pvz', nextItems);
+        selectPvz(pvz);
+        syncPvzMapSelection();
+      };
+
+      const renderPvzMapPoints = async () => {
+        if (!selectedCity?.code || !pvzMapState.map || !pvzMapState.clusterer) return;
+        const ymaps = window.ymaps;
+        const points = await fetchPvzPointsForMap();
+        pvzMapState.items = points;
+        pvzMapState.cityCode = selectedCity.code;
+        pvzMapState.clusterer.removeAll();
+        pvzMapState.placemarks.clear();
+
+        const placemarks = points.map((pvz) => {
+          const placemark = new ymaps.Placemark(
+            [Number(pvz.geo.lat), Number(pvz.geo.lon)],
+            {
+              balloonContentBody: buildPvzMapBalloon(pvz),
+              hintContent: pvz.name || pvz.address || pvz.code,
+            },
+            {
+              preset: getPlacemarkPreset(pvz.code),
+            },
+          );
+          pvzMapState.placemarks.set(pvz.code, placemark);
+          return placemark;
+        });
+
+        pvzMapState.clusterer.add(placemarks);
+
+        if (placemarks.length) {
+          pvzMapState.map.setBounds(pvzMapState.clusterer.getBounds(), {
+            checkZoomRange: true,
+            zoomMargin: 24,
+          });
+        }
+        syncPvzMapSelection();
+      };
+
+      const destroyPvzMap = () => {
+        if (pvzMapState.map?.destroy) pvzMapState.map.destroy();
+        pvzMapState.map = null;
+        pvzMapState.clusterer = null;
+        pvzMapState.placemarks.clear();
+        pvzMapState.items = [];
+        pvzMapState.cityCode = null;
+        pvzMapState.selectedCode = null;
         if (widgetSlot) {
           widgetSlot.innerHTML = '';
           hideBlock(widgetSlot);
         }
       };
 
-      const syncCdekWidget = async () => {
+      const syncPvzMap = async () => {
         if (!widgetSlot) return;
         if (!selectedCity?.name || getShippingMethod() !== 'PVZ' || pvzFlow.hidden) {
-          destroyCdekWidget();
+          destroyPvzMap();
           return;
         }
 
         showBlock(widgetSlot);
 
-        if (!hasWidgetConfig()) {
-          setWidgetFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
-          return;
-        }
-
-        if (cdekWidgetState.instance && cdekWidgetState.cityCode === selectedCity.code) {
+        if (!hasYandexMapsKey()) {
+          setPvzMapFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
           return;
         }
 
         try {
-          const WidgetCtor = await loadCdekWidgetScript();
-          if (!WidgetCtor) throw new Error('CDEK widget is unavailable');
-          destroyCdekWidget();
-          clearWidgetFallback();
+          await ensurePvzMap();
+          clearPvzMapFallback();
           showBlock(widgetSlot);
-          cdekWidgetState.instance = new WidgetCtor({
-            root: cdekWidgetConfig.rootId || 'cdek-widget-slot',
-            apiKey: cdekWidgetConfig.apiKey,
-            servicePath: cdekWidgetConfig.servicePath,
-            from: cdekWidgetConfig.from,
-            defaultLocation: selectedCity.name,
-            canChoose: true,
-            fixBounds: cdekWidgetConfig.fixBounds || 'country',
-            hideDeliveryOptions: {
-              door: true,
-              pickup: true,
-              ...(cdekWidgetConfig.hideDeliveryOptions || {}),
-            },
-            hideFilters: cdekWidgetConfig.hideFilters || {},
-            forceFilters: {
-              type: 'PVZ',
-              ...(cdekWidgetConfig.forceFilters || {}),
-            },
-            tariffs: cdekWidgetConfig.tariffs,
-            lang: cdekWidgetConfig.lang || 'rus',
-            currency: cdekWidgetConfig.currency || 'RUB',
-            goods: buildWidgetParcels(),
-            onChoose: (mode, tariff, address) => {
-              if (mode !== 'office' || !address?.code) return;
-              upsertPvzFromWidget(address, tariff);
-            },
-          });
-          cdekWidgetState.cityCode = selectedCity.code;
+          if (pvzMapState.cityCode !== selectedCity.code || !pvzMapState.placemarks.size) {
+            await renderPvzMapPoints();
+          } else {
+            syncPvzMapSelection();
+          }
         } catch (_error) {
-          destroyCdekWidget();
-          setWidgetFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
+          destroyPvzMap();
+          setPvzMapFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
         }
       };
 
@@ -1507,6 +1552,14 @@
         if (item) selectHouseSuggestion(item);
       });
 
+      widgetSlot?.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-map-pvz-select]");
+        if (!target) return;
+        const code = target.getAttribute("data-map-pvz-select") || "";
+        const item = pvzMapState.items.find((row) => row.code === code) || state.pvz.items.find((row) => row.code === code);
+        if (item) applySelectedPvz(item);
+      });
+
       cityList.addEventListener("scroll", (event) => onAutocompleteScroll("city", event));
       pvzList.addEventListener("scroll", (event) => onAutocompleteScroll("pvz", event));
       streetList.addEventListener("scroll", (event) => onAutocompleteScroll("street", event));
@@ -1643,7 +1696,7 @@
         clearSelectedPvz();
         shippingQuote = null;
         renderShippingUI();
-        void syncCdekWidget();
+        void syncPvzMap();
         validateForm();
         pvzInput.focus();
       });
@@ -1739,7 +1792,7 @@
       rerenderOrder();
       renderShippingUI();
       syncShippingFields();
-      void syncCdekWidget();
+      void syncPvzMap();
       setInputClearState(cityInput, cityClearBtn);
       setInputClearState(pvzInput, pvzClearBtn);
       validateForm();
