@@ -111,7 +111,7 @@
                     <div class="muted" data-pvz-info-text></div>
                     <button type="button" class="pvz-change-link" data-pvz-change>Изменить</button>
                   </div>
-                  <div id="cdek-widget-slot" class="cdek-widget-slot" data-cdek-widget-slot></div>
+                  <div id="cdek-widget-slot" class="cdek-widget-slot" data-cdek-widget-slot hidden></div>
                 </div>
                 <div id="courierFlow" class="form-row" data-courier-fields hidden>
                   <div class="form-inline">
@@ -249,6 +249,14 @@
       const houseEmpty = document.querySelector("[data-house-empty]");
       const houseErrorEl = document.querySelector("[data-house-error]");
       const flatInput = document.querySelector("[data-courier-flat]");
+
+      const widgetSlot = document.querySelector("[data-cdek-widget-slot]");
+      const cdekWidgetConfig = window.APP_CONFIG.CDEK_WIDGET || {};
+      const cdekWidgetState = {
+        scriptPromise: null,
+        instance: null,
+        cityCode: null,
+      };
 
       const consentInput = document.querySelector("[data-consent]");
       const promoInput = document.querySelector("[data-promo-input]");
@@ -665,6 +673,7 @@
         hideAutocomplete("city");
         showShippingError("");
         syncShippingFields();
+        void syncCdekWidget();
         setInputClearState(cityInput, cityClearBtn);
         validateForm();
       };
@@ -690,6 +699,152 @@
         st.visibleCount = 20;
         st.activeIndex = rows.length ? 0 : -1;
         renderAutocomplete(key);
+      };
+
+      const setWidgetFallback = (message) => {
+        if (!widgetSlot) return;
+        showBlock(widgetSlot);
+        widgetSlot.innerHTML = `<div class="cdek-widget-fallback muted">${message}</div>`;
+      };
+
+      const clearWidgetFallback = () => {
+        if (!widgetSlot) return;
+        widgetSlot.innerHTML = "";
+      };
+
+      const hasWidgetConfig = () => Boolean(cdekWidgetConfig.apiKey && cdekWidgetConfig.servicePath);
+
+      const loadCdekWidgetScript = () => {
+        if (window.CDEKWidget) return Promise.resolve(window.CDEKWidget);
+        if (cdekWidgetState.scriptPromise) return cdekWidgetState.scriptPromise;
+        cdekWidgetState.scriptPromise = new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-cdek-widget-script]');
+          if (existing) {
+            existing.addEventListener('load', () => resolve(window.CDEKWidget), { once: true });
+            existing.addEventListener('error', () => reject(new Error('CDEK widget script failed to load')), { once: true });
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = cdekWidgetConfig.scriptUrl || 'https://cdn.jsdelivr.net/gh/cdek-it/widget@3/dist/cdek-widget.umd.js';
+          script.async = true;
+          script.dataset.cdekWidgetScript = 'true';
+          script.onload = () => resolve(window.CDEKWidget);
+          script.onerror = () => reject(new Error('CDEK widget script failed to load'));
+          document.head.appendChild(script);
+        });
+        return cdekWidgetState.scriptPromise;
+      };
+
+      const buildWidgetParcels = () => {
+        const cart = getCart();
+        if (!cart.length) return [{ weight: 1000, length: 40, width: 30, height: 10 }];
+        const totalQty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 1;
+        return [{
+          weight: 1000,
+          length: 40,
+          width: 30,
+          height: Math.min(25, 10 + Math.max(totalQty - 1, 0) * 4),
+        }];
+      };
+
+      const upsertPvzFromWidget = (address, tariff) => {
+        if (!address?.code) return;
+        const widgetPvz = {
+          code: String(address.code),
+          name: address.name || address.address || String(address.code),
+          address: address.address || '',
+          city: address.city || selectedCity?.name || '',
+          postalCode: address.postal_code || undefined,
+          workTime: address.work_time || undefined,
+          geo: Array.isArray(address.location) && address.location.length === 2
+            ? { lat: Number(address.location[1]), lon: Number(address.location[0]) }
+            : undefined,
+          type: address.type || undefined,
+          label: [address.name, address.address].filter(Boolean).join(' — ') || String(address.code),
+        };
+        const nextItems = [...state.pvz.items.filter((item) => item.code !== widgetPvz.code), widgetPvz];
+        setAutocompleteData('pvz', nextItems);
+        if (tariff?.delivery_sum) {
+          shippingQuote = {
+            ...(shippingQuote || {}),
+            shippingCostMinor: Math.round(Number(tariff.delivery_sum || 0) * 100),
+            deliveryDaysMin: tariff.period_min,
+            deliveryDaysMax: tariff.period_max,
+            serviceName: tariff.tariff_name || shippingQuote?.serviceName || '',
+            tariffCode: tariff.tariff_code || shippingQuote?.tariffCode || undefined,
+          };
+        }
+        selectPvz(widgetPvz);
+      };
+
+      const destroyCdekWidget = () => {
+        if (cdekWidgetState.instance?.destroy) {
+          cdekWidgetState.instance.destroy();
+        }
+        cdekWidgetState.instance = null;
+        cdekWidgetState.cityCode = null;
+        if (widgetSlot) {
+          widgetSlot.innerHTML = '';
+          hideBlock(widgetSlot);
+        }
+      };
+
+      const syncCdekWidget = async () => {
+        if (!widgetSlot) return;
+        if (!selectedCity?.name || getShippingMethod() !== 'PVZ' || pvzFlow.hidden) {
+          destroyCdekWidget();
+          return;
+        }
+
+        showBlock(widgetSlot);
+
+        if (!hasWidgetConfig()) {
+          setWidgetFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
+          return;
+        }
+
+        if (cdekWidgetState.instance && cdekWidgetState.cityCode === selectedCity.code) {
+          return;
+        }
+
+        try {
+          const WidgetCtor = await loadCdekWidgetScript();
+          if (!WidgetCtor) throw new Error('CDEK widget is unavailable');
+          destroyCdekWidget();
+          clearWidgetFallback();
+          showBlock(widgetSlot);
+          cdekWidgetState.instance = new WidgetCtor({
+            root: cdekWidgetConfig.rootId || 'cdek-widget-slot',
+            apiKey: cdekWidgetConfig.apiKey,
+            servicePath: cdekWidgetConfig.servicePath,
+            from: cdekWidgetConfig.from,
+            defaultLocation: selectedCity.name,
+            canChoose: true,
+            fixBounds: cdekWidgetConfig.fixBounds || 'country',
+            hideDeliveryOptions: {
+              door: true,
+              pickup: true,
+              ...(cdekWidgetConfig.hideDeliveryOptions || {}),
+            },
+            hideFilters: cdekWidgetConfig.hideFilters || {},
+            forceFilters: {
+              type: 'PVZ',
+              ...(cdekWidgetConfig.forceFilters || {}),
+            },
+            tariffs: cdekWidgetConfig.tariffs,
+            lang: cdekWidgetConfig.lang || 'rus',
+            currency: cdekWidgetConfig.currency || 'RUB',
+            goods: buildWidgetParcels(),
+            onChoose: (mode, tariff, address) => {
+              if (mode !== 'office' || !address?.code) return;
+              upsertPvzFromWidget(address, tariff);
+            },
+          });
+          cdekWidgetState.cityCode = selectedCity.code;
+        } catch (_error) {
+          destroyCdekWidget();
+          setWidgetFallback('Карта ПВЗ временно недоступна, выберите пункт выдачи через список.');
+        }
       };
 
       const scheduleLookup = (key, fn, delay = 300) => {
@@ -1488,6 +1643,7 @@
         clearSelectedPvz();
         shippingQuote = null;
         renderShippingUI();
+        void syncCdekWidget();
         validateForm();
         pvzInput.focus();
       });
@@ -1583,6 +1739,7 @@
       rerenderOrder();
       renderShippingUI();
       syncShippingFields();
+      void syncCdekWidget();
       setInputClearState(cityInput, cityClearBtn);
       setInputClearState(pvzInput, pvzClearBtn);
       validateForm();

@@ -1,5 +1,28 @@
 window.APP_CONFIG = {
   API_BASE_URL: "https://overtn-backend.onrender.com",
+  CDEK_WIDGET: {
+    scriptUrl: "https://cdn.jsdelivr.net/gh/cdek-it/widget@3/dist/cdek-widget.umd.js",
+    apiKey: "",
+    servicePath: "",
+    rootId: "cdek-widget-slot",
+    from: {
+      country_code: "RU",
+      city: "Москва",
+    },
+    hideDeliveryOptions: {
+      door: true,
+      pickup: true,
+    },
+    hideFilters: {
+      type: true,
+    },
+    forceFilters: {
+      type: "PVZ",
+    },
+    lang: "rus",
+    currency: "RUB",
+    fixBounds: "country",
+  },
 };
 
 window.apiRequest = async (path, options = {}) => {
