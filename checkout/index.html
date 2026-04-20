@@ -758,7 +758,7 @@
 
       const fetchPvzPointsForMap = async () => {
         if (!selectedCity?.code) return [];
-        const rows = await window.apiRequest(`/api/v1/shipping/cdek/pvz?cityCode=${encodeURIComponent(selectedCity.code)}&q=&size=200`);
+        const rows = await window.apiRequest(`/api/v1/shipping/cdek/pvz?cityCode=${encodeURIComponent(selectedCity.code)}&q=&size=500`);
         const mapped = mapPvzRows(rows);
         const merged = [
           ...state.pvz.items.filter((item) => item.code && !mapped.some((row) => row.code === item.code)),
@@ -828,9 +828,40 @@
         if (openBalloon) placemark.balloon.open();
       };
 
+      const canRenderPvzOnMap = (pvz) => Boolean(
+        pvz?.code
+        && pvz?.geo
+        && Number.isFinite(Number(pvz.geo.lat))
+        && Number.isFinite(Number(pvz.geo.lon))
+      );
+
+      const upsertPvzPlacemark = (pvz) => {
+        if (!pvzMapState.clusterer || !window.ymaps || !canRenderPvzOnMap(pvz)) return null;
+        const existing = pvzMapState.placemarks.get(pvz.code);
+        if (existing) return existing;
+        const placemark = new window.ymaps.Placemark(
+          [Number(pvz.geo.lat), Number(pvz.geo.lon)],
+          {
+            balloonContentBody: buildPvzMapBalloon(pvz),
+            hintContent: pvz.name || pvz.address || pvz.code,
+          },
+          {
+            preset: getPlacemarkPreset(pvz.code),
+          },
+        );
+        pvzMapState.placemarks.set(pvz.code, placemark);
+        pvzMapState.clusterer.add(placemark);
+        if (!pvzMapState.items.some((item) => item.code === pvz.code)) pvzMapState.items.push(pvz);
+        return placemark;
+      };
+
       const syncPvzMapSelection = ({ openBalloon = false } = {}) => {
-        if (!pvzMapState.placemarks.size) return;
         pvzMapState.selectedCode = selectedPvz?.code || null;
+        if (selectedPvz?.code && !pvzMapState.placemarks.has(selectedPvz.code)) {
+          const sourcePvz = state.pvz.items.find((item) => item.code === selectedPvz.code) || selectedPvz;
+          upsertPvzPlacemark(sourcePvz);
+        }
+        if (!pvzMapState.placemarks.size) return;
         pvzMapState.placemarks.forEach((placemark, code) => {
           placemark.options.set('preset', getPlacemarkPreset(code));
         });
@@ -847,29 +878,13 @@
 
       const renderPvzMapPoints = async () => {
         if (!selectedCity?.code || !pvzMapState.map || !pvzMapState.clusterer) return;
-        const ymaps = window.ymaps;
         const points = await fetchPvzPointsForMap();
         pvzMapState.items = points;
         pvzMapState.cityCode = selectedCity.code;
         pvzMapState.clusterer.removeAll();
         pvzMapState.placemarks.clear();
 
-        const placemarks = points.map((pvz) => {
-          const placemark = new ymaps.Placemark(
-            [Number(pvz.geo.lat), Number(pvz.geo.lon)],
-            {
-              balloonContentBody: buildPvzMapBalloon(pvz),
-              hintContent: pvz.name || pvz.address || pvz.code,
-            },
-            {
-              preset: getPlacemarkPreset(pvz.code),
-            },
-          );
-          pvzMapState.placemarks.set(pvz.code, placemark);
-          return placemark;
-        });
-
-        pvzMapState.clusterer.add(placemarks);
+        const placemarks = points.map((pvz) => upsertPvzPlacemark(pvz)).filter(Boolean);
 
         if (placemarks.length) {
           pvzMapState.map.setBounds(pvzMapState.clusterer.getBounds(), {
