@@ -800,12 +800,20 @@
         : 'islands#darkOrangeDotIcon';
 
       const buildPvzMapBalloon = (pvz) => {
-        const title = pvz.name || pvz.code || 'Пункт выдачи';
-        const address = pvz.address || pvz.label || '';
+        const clean = (value) => String(value || "").replace(/\\n/g, " ").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
+        const title = clean(pvz.name || pvz.code || 'Пункт выдачи');
+        const address = clean(pvz.address || pvz.label || '');
+        const workTime = clean(pvz.workTime || pvz.work_time || '');
+        const phone = clean(pvz.phone || '');
+        const details = [
+          address ? `<div><strong>Адрес:</strong> ${address}</div>` : "",
+          workTime ? `<div><strong>Время работы:</strong> ${workTime}</div>` : "",
+          phone ? `<div><strong>Телефон:</strong> ${phone}</div>` : "",
+        ].filter(Boolean).join("");
         return `
           <div class="pvz-map-balloon">
             <strong>${title}</strong>
-            <div>${address}</div>
+            ${details}
             <button type="button" class="pvz-map-select" data-map-pvz-select="${pvz.code}">Выбрать</button>
           </div>
         `;
