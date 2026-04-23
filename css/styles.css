@@ -1616,8 +1616,6 @@ a {
     flex-wrap: nowrap;
     gap: 0;
     margin: 0;
-    position: relative;
-    top: 1px;
   }
 
   .mobile-nav-toggle {
@@ -1633,7 +1631,7 @@ a {
     cursor: pointer;
     align-self: center;
     margin: 0;
-    top: 1px;
+    transform: translateY(2px);
   }
 
   .mobile-nav-toggle span {
@@ -1671,8 +1669,7 @@ a {
     align-self: center;
     justify-self: center;
     margin: 0;
-    position: relative;
-    top: 1px;
+    transform: translateY(2px);
   }
 
   .logo-link img {
@@ -1684,6 +1681,7 @@ a {
     height: 34px;
     align-self: center;
     margin: 0;
+    transform: translateY(2px);
   }
 
   .mobile-nav-panel {
