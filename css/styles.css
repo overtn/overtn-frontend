@@ -1746,7 +1746,7 @@ a {
   .mobile-nav-socials {
     display: grid;
     gap: 10px;
-    transform: translateY(-3px);
+    transform: translateY(-7px);
   }
 
   .mobile-nav-links a,
