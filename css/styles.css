@@ -1836,6 +1836,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .section-title {
+    margin-top: 52px;
+  }
+
   .checkout-grid {
     grid-template-columns: 1fr;
   }
