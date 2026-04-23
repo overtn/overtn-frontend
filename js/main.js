@@ -78,12 +78,103 @@ const initSlider = () => {
   };
 
   const next = () => goTo((current + 1) % slides.length, 1);
+  const prev = () => goTo((current - 1 + slides.length) % slides.length, -1);
+
+  let autoplayTimer = null;
+  let autoplayResumeTimer = null;
+
+  const clearAutoplay = () => {
+    if (autoplayTimer) {
+      clearInterval(autoplayTimer);
+      autoplayTimer = null;
+    }
+    if (autoplayResumeTimer) {
+      clearTimeout(autoplayResumeTimer);
+      autoplayResumeTimer = null;
+    }
+  };
+
+  const startAutoplay = () => {
+    clearAutoplay();
+    autoplayTimer = setInterval(next, 5000);
+  };
+
+  const pauseAutoplay = () => {
+    clearAutoplay();
+    autoplayResumeTimer = setTimeout(() => {
+      startAutoplay();
+    }, 5000);
+  };
 
   dots.forEach((dot, i) => {
-    dot.addEventListener("click", () => goTo(i));
+    dot.addEventListener("click", () => {
+      pauseAutoplay();
+      goTo(i);
+    });
   });
 
-  setInterval(next, 5000);
+  if (window.matchMedia("(max-width: 980px)").matches) {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchDeltaX = 0;
+    let touchDeltaY = 0;
+    let isSwipeCandidate = false;
+
+    slider.addEventListener(
+      "touchstart",
+      (event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchDeltaX = 0;
+        touchDeltaY = 0;
+        isSwipeCandidate = true;
+      },
+      { passive: true }
+    );
+
+    slider.addEventListener(
+      "touchmove",
+      (event) => {
+        if (!isSwipeCandidate) return;
+        const touch = event.touches[0];
+        if (!touch) return;
+        touchDeltaX = touch.clientX - touchStartX;
+        touchDeltaY = touch.clientY - touchStartY;
+        if (Math.abs(touchDeltaY) > Math.abs(touchDeltaX)) {
+          isSwipeCandidate = false;
+        }
+      },
+      { passive: true }
+    );
+
+    slider.addEventListener("touchend", () => {
+      if (!isSwipeCandidate || isAnimating) {
+        isSwipeCandidate = false;
+        return;
+      }
+      const absX = Math.abs(touchDeltaX);
+      const absY = Math.abs(touchDeltaY);
+      if (absX < 40 || absX <= absY) {
+        isSwipeCandidate = false;
+        return;
+      }
+      pauseAutoplay();
+      if (touchDeltaX < 0) {
+        next();
+      } else {
+        prev();
+      }
+      isSwipeCandidate = false;
+    });
+
+    slider.addEventListener("touchcancel", () => {
+      isSwipeCandidate = false;
+    });
+  }
+
+  startAutoplay();
   updateDots(0);
 };
 
