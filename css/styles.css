@@ -1631,7 +1631,7 @@ a {
     cursor: pointer;
     align-self: center;
     margin: 0;
-    transform: translateY(4px);
+    transform: translateY(7px);
   }
 
   .mobile-nav-toggle span {
@@ -1669,7 +1669,7 @@ a {
     align-self: center;
     justify-self: center;
     margin: 0;
-    transform: translateY(4px);
+    transform: translateY(7px);
   }
 
   .logo-link img {
@@ -1681,7 +1681,7 @@ a {
     height: 36px;
     align-self: center;
     margin: 0;
-    transform: translateY(4px);
+    transform: translateY(7px);
   }
 
   .mobile-nav-panel {
