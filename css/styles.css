@@ -1846,7 +1846,11 @@ a {
   }
 
   .footer {
-    margin-top: 18px;
+    margin-top: 0;
+  }
+
+  .footer-shell {
+    --footer-shell-offset-y: 18px;
   }
 
   .checkout-grid {
