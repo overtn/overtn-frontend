@@ -490,15 +490,17 @@ a {
   transition: filter 0.2s ease, opacity 0.2s ease;
   position: absolute;
   left: 50%;
-  bottom: var(--footer-shell-offset-y);
+  bottom: calc(var(--footer-shell-offset-y) - 2px);
   transform: translateX(-50%);
   z-index: 1;
 }
 
 .footer-logo img {
-  width: 100%;
+  width: 120%;
   height: auto;
   display: block;
+  margin-left: 50%;
+  transform: translateX(-50%);
 }
 
 .footer-logo:hover {
@@ -1604,12 +1606,12 @@ a {
   .footer-logo {
     width: min(340px, 64vw);
     left: 50%;
-    bottom: var(--footer-shell-offset-y);
+    bottom: calc(var(--footer-shell-offset-y) - 2px);
     transform: translateX(-50%);
   }
 
   .footer-logo img {
-    width: 100%;
+    width: 120%;
     height: auto;
   }
 
