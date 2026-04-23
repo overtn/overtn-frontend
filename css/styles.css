@@ -1595,9 +1595,11 @@ a {
   .nav {
     grid-template-columns: auto 1fr auto;
     align-items: center;
+    align-content: center;
     gap: 12px;
-    height: 54px;
-    padding: 0 14px;
+    min-height: 54px;
+    height: auto;
+    padding: 8px 14px;
     border-radius: 22px;
     overflow: hidden;
     transition: padding 0.28s ease, border-radius 0.28s ease, background-color 0.28s ease;
@@ -1614,7 +1616,7 @@ a {
     align-items: center;
     flex-wrap: nowrap;
     gap: 0;
-    height: 100%;
+    margin: 0;
   }
 
   .mobile-nav-toggle {
@@ -1629,6 +1631,7 @@ a {
     position: relative;
     cursor: pointer;
     align-self: center;
+    margin: 0;
   }
 
   .mobile-nav-toggle span {
@@ -1664,8 +1667,8 @@ a {
     display: inline-flex;
     align-items: center;
     align-self: center;
-    height: 100%;
     justify-self: center;
+    margin: 0;
   }
 
   .logo-link img {
@@ -1676,6 +1679,7 @@ a {
     width: 34px;
     height: 34px;
     align-self: center;
+    margin: 0;
   }
 
   .mobile-nav-panel {
