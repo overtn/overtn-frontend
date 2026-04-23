@@ -1596,8 +1596,8 @@ a {
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 12px;
-    padding: 4px 14px;
-    min-height: 54px;
+    height: 54px;
+    padding: 0 14px;
     border-radius: 22px;
     overflow: hidden;
     transition: padding 0.28s ease, border-radius 0.28s ease, background-color 0.28s ease;
@@ -1609,9 +1609,12 @@ a {
   }
 
   .nav-right {
+    display: flex;
     justify-content: flex-end;
+    align-items: center;
     flex-wrap: nowrap;
     gap: 0;
+    height: 100%;
   }
 
   .mobile-nav-toggle {
@@ -1625,6 +1628,7 @@ a {
     background: transparent;
     position: relative;
     cursor: pointer;
+    align-self: center;
   }
 
   .mobile-nav-toggle span {
@@ -1657,6 +1661,10 @@ a {
   }
 
   .logo-link {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    height: 100%;
     justify-self: center;
   }
 
@@ -1667,6 +1675,7 @@ a {
   .cart-button {
     width: 34px;
     height: 34px;
+    align-self: center;
   }
 
   .mobile-nav-panel {
