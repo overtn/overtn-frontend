@@ -417,12 +417,13 @@ a {
 }
 
 .footer-shell {
+  --footer-shell-offset-y: 70px;
   background: rgba(200, 200, 200, 0.38);
   border-radius: 40px;
   border: 1px solid rgba(20, 16, 14, 0.08);
   box-shadow: var(--shadow);
   padding: 40px 40px 220px;
-  transform: translateY(70px);
+  transform: translateY(var(--footer-shell-offset-y));
   position: relative;
   width: 100%;
 }
@@ -489,7 +490,7 @@ a {
   transition: filter 0.2s ease, opacity 0.2s ease;
   position: absolute;
   left: 50%;
-  bottom: 72px;
+  bottom: var(--footer-shell-offset-y);
   transform: translateX(-50%);
   z-index: 1;
 }
@@ -1603,7 +1604,7 @@ a {
   .footer-logo {
     width: min(340px, 64vw);
     left: 50%;
-    bottom: 62px;
+    bottom: var(--footer-shell-offset-y);
     transform: translateX(-50%);
   }
 
