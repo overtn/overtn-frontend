@@ -282,6 +282,14 @@ a {
   overflow: hidden;
 }
 
+.slider.is-draggable {
+  cursor: grab;
+}
+
+.slider.is-dragging {
+  cursor: grabbing;
+}
+
 .slider-track {
   width: 100%;
   height: 100%;

@@ -172,6 +172,78 @@ const initSlider = () => {
     slider.addEventListener("touchcancel", () => {
       isSwipeCandidate = false;
     });
+  } else {
+    let dragStartX = 0;
+    let dragDeltaX = 0;
+    let isPointerDown = false;
+    let isDragging = false;
+    let suppressClick = false;
+
+    const resetDesktopDrag = () => {
+      isPointerDown = false;
+      isDragging = false;
+      dragStartX = 0;
+      dragDeltaX = 0;
+      slider.classList.remove("is-dragging");
+    };
+
+    slider.classList.add("is-draggable");
+
+    slider.addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || isAnimating) return;
+      isPointerDown = true;
+      isDragging = false;
+      dragStartX = event.clientX;
+      dragDeltaX = 0;
+      slider.classList.add("is-dragging");
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      if (!isPointerDown) return;
+      dragDeltaX = event.clientX - dragStartX;
+      if (Math.abs(dragDeltaX) > 6) {
+        isDragging = true;
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (!isPointerDown) return;
+      const absX = Math.abs(dragDeltaX);
+      const shouldSwitch = isDragging && absX >= 40 && !isAnimating;
+      const direction = dragDeltaX;
+      suppressClick = isDragging;
+      resetDesktopDrag();
+      if (!shouldSwitch) return;
+      pauseAutoplay();
+      if (direction < 0) {
+        next();
+      } else {
+        prev();
+      }
+    });
+
+    slider.addEventListener("mouseleave", () => {
+      if (!isPointerDown) return;
+      const absX = Math.abs(dragDeltaX);
+      const shouldSwitch = isDragging && absX >= 40 && !isAnimating;
+      const direction = dragDeltaX;
+      suppressClick = isDragging;
+      resetDesktopDrag();
+      if (!shouldSwitch) return;
+      pauseAutoplay();
+      if (direction < 0) {
+        next();
+      } else {
+        prev();
+      }
+    });
+
+    slider.addEventListener("click", (event) => {
+      if (!suppressClick) return;
+      suppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
   }
 
   startAutoplay();
