@@ -1807,6 +1807,12 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .hero-main {
+    aspect-ratio: 2752 / 1536;
+    background-size: contain;
+    background-position: center center;
+  }
+
   .products,
   .footer-grid,
   .product-page {
