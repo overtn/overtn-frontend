@@ -1838,6 +1838,15 @@ a {
 
   .section-title {
     margin-top: 52px;
+    margin-bottom: 18px;
+  }
+
+  .products {
+    gap: 18px;
+  }
+
+  .footer {
+    margin-top: 18px;
   }
 
   .checkout-grid {
