@@ -496,11 +496,11 @@ a {
 }
 
 .footer-logo img {
-  width: 120%;
+  width: 100%;
   height: auto;
   display: block;
-  margin-left: 50%;
-  transform: translateX(-50%);
+  transform: scale(1.25);
+  transform-origin: bottom center;
 }
 
 .footer-logo:hover {
@@ -1611,7 +1611,7 @@ a {
   }
 
   .footer-logo img {
-    width: 120%;
+    width: 100%;
     height: auto;
   }
 
