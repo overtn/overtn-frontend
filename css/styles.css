@@ -1746,6 +1746,7 @@ a {
   .mobile-nav-socials {
     display: grid;
     gap: 10px;
+    transform: translateY(-3px);
   }
 
   .mobile-nav-links a,
@@ -1760,7 +1761,12 @@ a {
   }
 
   .mobile-nav-socials {
-    margin-top: 14px;
+    margin-top: 10px;
+  }
+
+  .mobile-nav-social-icons .social-link {
+    width: 36px;
+    height: 36px;
   }
 
   .mobile-nav-social-icons {
