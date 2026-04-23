@@ -1845,12 +1845,16 @@ a {
     gap: 18px;
   }
 
+  .product-card:last-child {
+    margin-bottom: 40px;
+  }
+
   .footer {
     margin-top: 0;
   }
 
   .footer-shell {
-    --footer-shell-offset-y: 18px;
+    --footer-shell-offset-y: 0;
   }
 
   .checkout-grid {
