@@ -110,6 +110,78 @@ const removeItem = (id, size) => {
   renderCartDrawer();
 };
 
+const initMobileNav = () => {
+  const nav = document.querySelector(".nav");
+  if (!nav) return;
+
+  const logo = nav.querySelector(".logo-link");
+  const right = nav.querySelector(".nav-right");
+  const leftLinks = [...nav.querySelectorAll(".nav-left a")];
+  const socialLinks = [...nav.querySelectorAll(".nav-right .social-link")];
+  if (!logo || !right || !leftLinks.length) return;
+
+  let toggle = nav.querySelector(".mobile-nav-toggle");
+  let panel = nav.querySelector(".mobile-nav-panel");
+
+  if (!toggle) {
+    toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "mobile-nav-toggle";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Открыть меню");
+    toggle.innerHTML = "<span></span><span></span><span></span>";
+    nav.insertBefore(toggle, logo);
+  }
+
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "mobile-nav-panel";
+    panel.innerHTML = `
+      <div class="mobile-nav-links">
+        ${leftLinks.map((link) => `<a href="${link.getAttribute("href") || "#"}"${link.target ? ` target="${link.target}"` : ""}${link.rel ? ` rel="${link.rel}"` : ""}>${link.textContent?.trim() || ""}</a>`).join("")}
+      </div>
+      <div class="mobile-nav-socials">
+        <span class="mobile-nav-socials-title">Соцсети</span>
+        <div class="mobile-nav-social-icons">
+          ${socialLinks.map((link) => link.outerHTML).join("")}
+        </div>
+      </div>
+    `;
+    nav.appendChild(panel);
+  }
+
+  const closeMenu = () => {
+    nav.classList.remove("mobile-open");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Открыть меню");
+  };
+
+  const openMenu = () => {
+    nav.classList.add("mobile-open");
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-label", "Закрыть меню");
+  };
+
+  toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (nav.classList.contains("mobile-open")) closeMenu();
+    else openMenu();
+  });
+
+  panel.addEventListener("click", (event) => event.stopPropagation());
+  panel.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => closeMenu()));
+
+  document.addEventListener("click", (event) => {
+    if (!nav.classList.contains("mobile-open")) return;
+    if (nav.contains(event.target)) return;
+    closeMenu();
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 980) closeMenu();
+  });
+};
+
 const addToCart = (product, size = null) => {
   const sizeLabel = size || product.variants?.[0]?.size || null;
   const matchedVariant = product.variants?.find((v) => v.size === sizeLabel) || product.variants?.[0];
@@ -199,6 +271,7 @@ const initTrackingModal = () => {
 };
 
 const initCommonUi = () => {
+  initMobileNav();
   initCartActions();
   initTrackingModal();
   updateCartCount();
