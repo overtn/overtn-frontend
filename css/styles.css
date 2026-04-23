@@ -1778,6 +1778,17 @@ a {
   .mobile-nav-social-icons .social-link {
     display: inline-flex;
   }
+
+  .cart-drawer {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, 20px);
+  }
+
+  .cart-drawer.active {
+    transform: translate(-50%, 0);
+  }
+
   .footer-logo {
     width: min(340px, 64vw);
     left: 50%;
