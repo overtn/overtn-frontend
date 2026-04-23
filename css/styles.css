@@ -1855,6 +1855,7 @@ a {
 
   .footer-shell {
     --footer-shell-offset-y: 0;
+    padding-bottom: 180px;
   }
 
   .checkout-grid {
