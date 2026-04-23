@@ -1802,7 +1802,8 @@ a {
   }
 
   .hero {
-    margin-top: 26px;
+    margin-top: 18px;
+    gap: 18px;
     grid-template-columns: 1fr;
   }
 
