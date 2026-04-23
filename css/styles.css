@@ -1681,7 +1681,43 @@ a {
     height: 36px;
     align-self: center;
     margin: 0;
+    color: #000000;
     transform: translateY(6px);
+  }
+
+  .cart-button svg {
+    stroke: #000000;
+    fill: none;
+  }
+
+  .cart-button:hover,
+  .cart-button:focus,
+  .cart-button:active {
+    color: #000000;
+  }
+
+  .cart-button:hover svg,
+  .cart-button:focus svg,
+  .cart-button:active svg {
+    stroke: #000000;
+  }
+
+  .cart-qty button,
+  .cart-remove {
+    color: #000000;
+    fill: #000000;
+    stroke: #000000;
+  }
+
+  .cart-qty button:hover,
+  .cart-qty button:focus,
+  .cart-qty button:active,
+  .cart-remove:hover,
+  .cart-remove:focus,
+  .cart-remove:active {
+    color: #000000;
+    fill: #000000;
+    stroke: #000000;
   }
 
   .mobile-nav-panel {
