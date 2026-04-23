@@ -137,6 +137,10 @@ const syncHeroHeights = () => {
   const heroMain = document.querySelector(".hero-main");
   const sliderPanel = document.querySelector(".hero-slider-panel");
   if (!heroMain || !sliderPanel) return;
+  if (window.matchMedia("(max-width: 980px)").matches) {
+    heroMain.style.height = "";
+    return;
+  }
   const height = sliderPanel.getBoundingClientRect().height;
   if (height) heroMain.style.height = `${height}px`;
 };
