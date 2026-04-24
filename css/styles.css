@@ -874,6 +874,14 @@ a {
   line-height: 1.6;
 }
 
+.product-description p {
+  margin: 0 0 12px;
+}
+
+.product-description p:last-child {
+  margin-bottom: 0;
+}
+
 .tabs button.active {
   background: rgba(20, 16, 14, 0.12);
 }
@@ -889,12 +897,16 @@ a {
   line-height: 1.6;
 }
 
-.tab-content p {
-  margin: 0 0 8px;
+.care-text,
+.delivery-text {
+  display: block;
 }
 
-.tab-content p:last-child {
-  margin-bottom: 0;
+.care-text br,
+.delivery-text br {
+  content: "";
+  display: block;
+  margin-top: 4px;
 }
 
 .toast {
