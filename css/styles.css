@@ -1109,11 +1109,23 @@ body.gallery-open {
     height: 56px;
   }
 
+  .product-viewer-close span {
+    width: 11px;
+    height: 1.2px;
+  }
+
   .product-viewer-nav {
     display: block;
     width: 52px;
     height: 52px;
     top: 50%;
+  }
+
+  .product-viewer-nav::before {
+    width: 10px;
+    height: 10px;
+    border-top-width: 1.4px;
+    border-right-width: 1.4px;
   }
 
   .product-viewer-nav.prev {
