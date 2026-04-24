@@ -1483,6 +1483,7 @@ body.gallery-open {
   min-height: 340px;
   border-radius: 18px;
   overflow: hidden;
+  position: relative;
 }
 
 .pvz-map-canvas {
@@ -1520,38 +1521,39 @@ body.gallery-open {
 }
 
 @media (max-width: 980px) {
-  .ymaps-2-1-79-balloon__layout {
-    width: 180px !important;
-    max-width: 180px !important;
-    min-width: 0 !important;
-    transform: translateY(-70px) !important;
+  .pvz-map-popup {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 180px;
+    max-width: 180px;
+    z-index: 20;
+    display: none;
+    pointer-events: auto;
   }
 
-  .ymaps-2-1-79-balloon__content {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    padding: 0 !important;
-    margin: 0 auto !important;
+  .pvz-map-popup.show {
+    display: block;
   }
 
-  .ymaps-2-1-79-balloon__tail {
-    transform: translateY(-70px) !important;
-  }
-
-  .ymaps-2-1-79-balloon__content .pvz-map-balloon {
+  .pvz-map-popup .pvz-map-balloon {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    margin: 0;
+    background: #ffffff;
+    border: 1px solid rgba(20, 16, 14, 0.12);
+    border-radius: 18px;
+    box-shadow: 0 16px 36px rgba(20, 16, 14, 0.16);
+    padding: 12px;
   }
 
-  .ymaps-2-1-79-balloon__content .pvz-map-select,
-  .ymaps-2-1-79-balloon__content button[data-map-pvz-select] {
-    width: auto !important;
+  .pvz-map-popup .pvz-map-select,
+  .pvz-map-popup button[data-map-pvz-select] {
+    width: fit-content;
     max-width: 100%;
     display: inline-flex;
-    align-self: start;
+    align-self: flex-start;
   }
 }
 

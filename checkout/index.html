@@ -260,6 +260,7 @@
         items: [],
         cityCode: null,
         selectedCode: null,
+        mobilePopupCode: null,
       };
 
       const consentInput = document.querySelector("[data-consent]");
@@ -559,6 +560,7 @@
 
       const clearSelectedPvz = ({ clearInput = true } = {}) => {
         selectedPvz = null;
+        closeMobilePvzPopup();
         if (clearInput) pvzInput.value = "";
         pvzInfoText.innerHTML = "";
         showPvzError("");
@@ -713,10 +715,19 @@
         if (!mapSlot) return null;
         let canvas = getPvzMapCanvas();
         if (!canvas) {
-          mapSlot.innerHTML = '<div class="pvz-map-canvas" data-pvz-map-canvas></div>';
+          mapSlot.innerHTML = '<div class="pvz-map-canvas" data-pvz-map-canvas></div><div class="pvz-map-popup" data-pvz-map-popup hidden></div>';
           canvas = getPvzMapCanvas();
         }
         return canvas;
+      };
+
+      const closeMobilePvzPopup = () => {
+        pvzMapState.mobilePopupCode = null;
+        const popup = getPvzMapPopup();
+        if (!popup) return;
+        popup.hidden = true;
+        popup.classList.remove('show');
+        popup.innerHTML = '';
       };
 
       const setPvzMapFallback = (message) => {
@@ -726,6 +737,7 @@
       };
 
       const hasYandexMapsKey = () => Boolean(yandexMapsApiKey);
+      const isMobileMapPopup = () => window.matchMedia('(max-width: 980px)').matches;
 
       const loadYandexMapsApi = async () => {
         if (window.ymaps?.ready) return window.ymaps;
@@ -755,6 +767,7 @@
       };
 
       const getPvzMapCanvas = () => mapSlot?.querySelector('[data-pvz-map-canvas]');
+      const getPvzMapPopup = () => mapSlot?.querySelector('[data-pvz-map-popup]');
 
       const fetchPvzPointsForMap = async () => {
         if (!selectedCity?.code) return [];
@@ -799,7 +812,7 @@
         ? 'islands#redDotIcon'
         : 'islands#darkOrangeDotIcon';
 
-      const buildPvzMapBalloon = (pvz) => {
+      const buildPvzMapCardHtml = (pvz) => {
         const clean = (value) => String(value || "").replace(/\\n/g, " ").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
         const title = clean(pvz.name || pvz.code || 'Пункт выдачи');
         const address = clean(pvz.address || pvz.label || '');
@@ -819,12 +832,26 @@
         `;
       };
 
+      const openMobilePvzPopup = (pvz) => {
+        const popup = getPvzMapPopup();
+        if (!popup || !pvz?.code) return;
+        pvzMapState.mobilePopupCode = pvz.code;
+        popup.innerHTML = buildPvzMapCardHtml(pvz);
+        popup.hidden = false;
+        popup.classList.add('show');
+      };
+
       const focusPvzPlacemark = (code, { openBalloon = false } = {}) => {
         if (!code || !pvzMapState.map) return;
         const placemark = pvzMapState.placemarks.get(code);
         if (!placemark) return;
         const coords = placemark.geometry?.getCoordinates?.();
         if (coords) pvzMapState.map.panTo(coords, { flying: false, duration: 180 });
+        if (isMobileMapPopup()) {
+          const pvz = pvzMapState.items.find((item) => item.code === code) || state.pvz.items.find((item) => item.code === code);
+          if (openBalloon && pvz) openMobilePvzPopup(pvz);
+          return;
+        }
         if (openBalloon) placemark.balloon.open();
       };
 
@@ -841,14 +868,22 @@
         if (existing) return existing;
         const placemark = new window.ymaps.Placemark(
           [Number(pvz.geo.lat), Number(pvz.geo.lon)],
-          {
-            balloonContentBody: buildPvzMapBalloon(pvz),
-            hintContent: pvz.name || pvz.address || pvz.code,
-          },
+          isMobileMapPopup()
+            ? {
+              hintContent: pvz.name || pvz.address || pvz.code,
+            }
+            : {
+              balloonContentBody: buildPvzMapCardHtml(pvz),
+              hintContent: pvz.name || pvz.address || pvz.code,
+            },
           {
             preset: getPlacemarkPreset(pvz.code),
           },
         );
+        placemark.events.add('click', () => {
+          if (!isMobileMapPopup()) return;
+          openMobilePvzPopup(pvz);
+        });
         pvzMapState.placemarks.set(pvz.code, placemark);
         pvzMapState.clusterer.add(placemark);
         if (!pvzMapState.items.some((item) => item.code === pvz.code)) pvzMapState.items.push(pvz);
@@ -873,6 +908,7 @@
         const nextItems = [...state.pvz.items.filter((item) => item.code !== pvz.code), pvz];
         setAutocompleteData('pvz', nextItems);
         selectPvz(pvz);
+        closeMobilePvzPopup();
         syncPvzMapSelection({ openBalloon: true });
       };
 
@@ -907,6 +943,7 @@
         pvzMapState.items = [];
         pvzMapState.cityCode = null;
         pvzMapState.selectedCode = null;
+        pvzMapState.mobilePopupCode = null;
         if (mapSlot) {
           mapSlot.innerHTML = '';
           hideBlock(mapSlot);
