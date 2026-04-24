@@ -6,12 +6,39 @@ window.APP_CONFIG = {
 window.apiRequest = async (path, options = {}) => {
   const baseUrl = window.APP_CONFIG.API_BASE_URL.replace(/\/+$/, "");
   const url = `${baseUrl}${path}`;
-  const response = await fetch(url, options);
+  const startedAt = performance.now();
+  const requestOptions = {
+    cache: "no-store",
+    ...options,
+  };
+
+  let response;
+  try {
+    response = await fetch(url, requestOptions);
+  } catch (error) {
+    const durationMs = Math.round(performance.now() - startedAt);
+    console.error("[apiRequest] network error", {
+      url,
+      status: 0,
+      responseURL: "",
+      durationMs,
+      message: error?.message || String(error),
+    });
+    throw error;
+  }
+
+  const durationMs = Math.round(performance.now() - startedAt);
   const contentType = response.headers.get("content-type") || "";
   const isJson = contentType.includes("application/json");
   const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
+    console.error("[apiRequest] http error", {
+      url,
+      status: response.status,
+      responseURL: response.url,
+      durationMs,
+    });
     const message =
       (typeof payload === "object" && payload !== null && (payload.message || payload.error)) ||
       (typeof payload === "string" && payload) ||
