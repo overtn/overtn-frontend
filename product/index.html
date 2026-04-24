@@ -98,15 +98,16 @@
       </div>
     </div>
 
-    <div class="modal-overlay" data-zoom-modal>
-      <div class="modal zoom-modal">
-        <button class="modal-close" type="button" data-zoom-close>×</button>
-        <button class="zoom-nav prev" type="button" data-zoom-prev aria-label="Предыдущее фото"></button>
-        <div class="zoom-stage">
-          <img class="zoom-image-layer" src="" alt="Zoom" data-zoom-image />
-        </div>
-        <button class="zoom-nav next" type="button" data-zoom-next aria-label="Следующее фото"></button>
+    <div class="product-viewer" data-product-viewer aria-hidden="true">
+      <button class="product-viewer-close" type="button" data-viewer-close aria-label="Закрыть просмотр">
+        <span></span>
+        <span></span>
+      </button>
+      <button class="product-viewer-nav prev" type="button" data-viewer-prev aria-label="Предыдущее фото"></button>
+      <div class="product-viewer-stage" data-viewer-stage>
+        <img class="product-viewer-image" src="" alt="" data-viewer-image />
       </div>
+      <button class="product-viewer-nav next" type="button" data-viewer-next aria-label="Следующее фото"></button>
     </div>
 
     <div class="toast"></div>

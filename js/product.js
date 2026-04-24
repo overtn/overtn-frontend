@@ -126,18 +126,24 @@ const initTabs = () => {
 };
 
 const initZoom = () => {
-  const modal = document.querySelector("[data-zoom-modal]");
-  const modalImage = document.querySelector("[data-zoom-image]");
-  const zoomStage = document.querySelector(".zoom-stage");
-  const prevButton = document.querySelector("[data-zoom-prev]");
-  const nextButton = document.querySelector("[data-zoom-next]");
-  const close = document.querySelector("[data-zoom-close]");
-  if (!modal || !modalImage) return;
+  const viewer = document.querySelector("[data-product-viewer]");
+  const viewerImage = document.querySelector("[data-viewer-image]");
+  const stage = document.querySelector("[data-viewer-stage]");
+  const closeButton = document.querySelector("[data-viewer-close]");
+  const prevButton = document.querySelector("[data-viewer-prev]");
+  const nextButton = document.querySelector("[data-viewer-next]");
+  if (!viewer || !viewerImage || !stage) return;
 
   let currentIndex = 0;
   let zoomImages = [];
-  let previousBodyOverflow = "";
-  let isZoomAnimating = false;
+  let pointerStartX = 0;
+  let pointerStartY = 0;
+  let pointerDeltaX = 0;
+  let pointerDeltaY = 0;
+  let isPointerActive = false;
+  let isPointerSwipe = false;
+  let activePointerId = null;
+  let suppressStageClick = false;
 
   const refreshImages = () => {
     zoomImages = Array.from(document.querySelectorAll("[data-gallery-grid] [data-zoom]"));
@@ -147,117 +153,124 @@ const initZoom = () => {
   };
 
   const renderIndex = () => {
-    if (!zoomImages.length) return;
     const item = zoomImages[currentIndex];
     if (!item) return;
-    modalImage.src = item.dataset.zoom || item.src;
-    modalImage.alt = item.alt || "Zoom";
-    modalImage.style.transform = "translateX(0)";
+    viewerImage.src = item.dataset.zoom || item.src;
+    viewerImage.alt = item.alt || "Фото товара";
   };
 
-  const openZoom = (index) => {
+  const openViewer = (index) => {
     refreshImages();
     if (!zoomImages.length) return;
     currentIndex = Math.max(0, Math.min(index, zoomImages.length - 1));
     renderIndex();
-    modal.classList.add("active");
-    previousBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    viewer.classList.add("active");
+    viewer.setAttribute("aria-hidden", "false");
+    document.body.classList.add("viewer-open");
   };
 
-  const closeZoom = () => {
-    modal.classList.remove("active");
-    document.body.style.overflow = previousBodyOverflow;
+  const closeViewer = () => {
+    viewer.classList.remove("active");
+    viewer.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("viewer-open");
+    resetPointer();
   };
 
   const showPrev = () => {
-    if (!zoomImages.length || isZoomAnimating) return;
-    const nextIndex = (currentIndex - 1 + zoomImages.length) % zoomImages.length;
-    switchZoomImage(nextIndex, -1);
+    if (!zoomImages.length) return;
+    currentIndex = (currentIndex - 1 + zoomImages.length) % zoomImages.length;
+    renderIndex();
   };
 
   const showNext = () => {
-    if (!zoomImages.length || isZoomAnimating) return;
-    const nextIndex = (currentIndex + 1) % zoomImages.length;
-    switchZoomImage(nextIndex, 1);
+    if (!zoomImages.length) return;
+    currentIndex = (currentIndex + 1) % zoomImages.length;
+    renderIndex();
   };
 
-  const switchZoomImage = (nextIndex, direction) => {
-    if (!modalImage || typeof modalImage.animate !== "function") {
-      currentIndex = nextIndex;
-      renderIndex();
-      return;
-    }
-
-    isZoomAnimating = true;
-    const outX = direction > 0 ? -100 : 100;
-    const inX = direction > 0 ? 100 : -100;
-    const nextItem = zoomImages[nextIndex];
-    const incomingImage = modalImage.cloneNode(true);
-    incomingImage.src = nextItem?.dataset.zoom || nextItem?.src || "";
-    incomingImage.alt = nextItem?.alt || "Zoom";
-    incomingImage.style.transform = `translateX(${inX}%)`;
-    incomingImage.style.position = "absolute";
-    incomingImage.style.inset = "0";
-    incomingImage.style.margin = "auto";
-    incomingImage.style.width = "100%";
-    incomingImage.style.height = "100%";
-    incomingImage.style.objectFit = "contain";
-    incomingImage.style.objectPosition = "center";
-    modalImage.parentElement?.appendChild(incomingImage);
-
-    const outgoingAnimation = modalImage.animate(
-      [{ transform: "translateX(0)" }, { transform: `translateX(${outX}%)` }],
-      { duration: 180, easing: "ease-out", fill: "forwards" }
-    );
-    const incomingAnimation = incomingImage.animate(
-      [{ transform: `translateX(${inX}%)` }, { transform: "translateX(0)" }],
-      { duration: 180, easing: "ease-out", fill: "forwards" }
-    );
-
-    Promise.all([
-      outgoingAnimation.finished,
-      incomingAnimation.finished
-    ])
-      .then(() => {
-        currentIndex = nextIndex;
-        renderIndex();
-      })
-      .catch(() => {
-        currentIndex = nextIndex;
-        renderIndex();
-      })
-      .finally(() => {
-        outgoingAnimation.cancel();
-        incomingAnimation.cancel();
-        incomingImage.remove();
-        modalImage.style.transform = "";
-        isZoomAnimating = false;
-      });
+  const resetPointer = () => {
+    activePointerId = null;
+    isPointerActive = false;
+    isPointerSwipe = false;
+    pointerStartX = 0;
+    pointerStartY = 0;
+    pointerDeltaX = 0;
+    pointerDeltaY = 0;
+    viewer.classList.remove("is-dragging");
   };
 
   document.addEventListener("click", (event) => {
     const img = event.target.closest("[data-zoom]");
     if (!img) return;
     const index = Number(img.dataset.zoomIndex || 0);
-    openZoom(index);
+    openViewer(index);
   });
 
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) closeZoom();
-  });
-  zoomStage?.addEventListener("click", (event) => {
-    if (event.target === zoomStage) closeZoom();
-  });
-
-  close?.addEventListener("click", closeZoom);
+  closeButton.addEventListener("click", closeViewer);
   prevButton?.addEventListener("click", showPrev);
   nextButton?.addEventListener("click", showNext);
 
+  viewer.addEventListener("click", (event) => {
+    if (suppressStageClick) {
+      suppressStageClick = false;
+      return;
+    }
+    if (event.target === viewer || event.target === stage) {
+      closeViewer();
+    }
+  });
+
+  stage.addEventListener("pointerdown", (event) => {
+    if (!viewer.classList.contains("active")) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    activePointerId = event.pointerId;
+    isPointerActive = true;
+    isPointerSwipe = false;
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    pointerDeltaX = 0;
+    pointerDeltaY = 0;
+    viewer.classList.add("is-dragging");
+    stage.setPointerCapture?.(event.pointerId);
+  });
+
+  stage.addEventListener("pointermove", (event) => {
+    if (!isPointerActive || event.pointerId !== activePointerId) return;
+    pointerDeltaX = event.clientX - pointerStartX;
+    pointerDeltaY = event.clientY - pointerStartY;
+    if (Math.abs(pointerDeltaX) > Math.abs(pointerDeltaY) && Math.abs(pointerDeltaX) > 8) {
+      isPointerSwipe = true;
+    }
+  });
+
+  const commitPointerGesture = () => {
+    if (!isPointerActive) return;
+    const absX = Math.abs(pointerDeltaX);
+    const absY = Math.abs(pointerDeltaY);
+    const shouldSlide = isPointerSwipe && absX >= 48 && absX > absY;
+    const direction = pointerDeltaX;
+    suppressStageClick = shouldSlide;
+    resetPointer();
+    if (!shouldSlide) return;
+    if (direction < 0) {
+      showNext();
+    } else {
+      showPrev();
+    }
+  };
+
+  stage.addEventListener("pointerup", (event) => {
+    if (event.pointerId !== activePointerId) return;
+    commitPointerGesture();
+  });
+
+  stage.addEventListener("pointercancel", resetPointer);
+  stage.addEventListener("lostpointercapture", resetPointer);
+
   document.addEventListener("keydown", (event) => {
-    if (!modal.classList.contains("active")) return;
+    if (!viewer.classList.contains("active")) return;
     if (event.key === "Escape") {
-      closeZoom();
+      closeViewer();
       return;
     }
     if (event.key === "ArrowLeft") {
