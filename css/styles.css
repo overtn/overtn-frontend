@@ -1105,8 +1105,11 @@ body.gallery-open {
   .product-viewer-close {
     top: max(12px, env(safe-area-inset-top, 0px) + 6px);
     right: max(12px, env(safe-area-inset-right, 0px) + 6px);
-    width: 56px;
-    height: 56px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .product-viewer-close span {
@@ -1116,9 +1119,12 @@ body.gallery-open {
 
   .product-viewer-nav {
     display: block;
-    width: 52px;
-    height: 52px;
+    width: 38px;
+    height: 38px;
     top: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .product-viewer-nav::before {
