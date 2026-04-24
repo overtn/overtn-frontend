@@ -11,6 +11,14 @@ const formatTabText = (text) =>
     .map((paragraph) => `<p>${paragraph.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char]))}</p>`)
     .join("");
 
+const formatCareText = (text) =>
+  `<div class="care-text">${String(text || "")
+    .split(/\n{2,}/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char])))
+    .join("<br>")}</div>`;
+
 const renderProduct = async () => {
   const slug = getProductSlug();
   if (!slug) throw new Error("Не указан id товара");
@@ -45,7 +53,7 @@ const renderProduct = async () => {
   }
   if (description) description.textContent = product.description;
   if (careContent) {
-    careContent.innerHTML = formatTabText(
+    careContent.innerHTML = formatCareText(
       media.care || "Деликатный уход. Следуйте рекомендациям на внутренней бирке."
     );
   }
