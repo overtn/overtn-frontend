@@ -887,6 +887,14 @@ a {
   line-height: 1.6;
 }
 
+.tab-content p {
+  margin: 0 0 8px;
+}
+
+.tab-content p:last-child {
+  margin-bottom: 0;
+}
+
 .toast {
   position: fixed;
   right: 24px;
