@@ -11,27 +11,33 @@ const CARE_TEXT = [
   "Гладить с изнаночной стороны при низкой температуре. Не гладить вышивку.",
 ].join("\n\n");
 
+const DELIVERY_TEXT = [
+  "Отправка заказа осуществляется в течение 7 рабочих дней.",
+  "Доставка выполняется сервисом CDEK до пункта выдачи заказов (ПВЗ), который вы выбираете при оформлении.",
+  "Доставка оплачивается сразу при оформлении заказа.",
+].join("\n\n");
+
 const PRODUCT_MEDIA = {
   "over-sweatshirt": {
     cover: "/assets/sweatshirt-1.png",
     hover: "/assets/sweatshirt-2.png",
     gallery: ["/assets/sweatshirt-1.png", "/assets/sweatshirt-2.png"],
     care: CARE_TEXT,
-    delivery: "Доставка до пункта выдачи: 2-5 рабочих дней по РФ. Трек-номер придет на e-mail.",
+    delivery: DELIVERY_TEXT,
   },
   "over-big-sweatpants": {
     cover: "/assets/pants-1.png",
     hover: "/assets/pants-2.png",
     gallery: ["/assets/pants-1.png", "/assets/pants-2.png"],
     care: CARE_TEXT,
-    delivery: "Доставка до пункта выдачи: 2-5 рабочих дней по РФ. Трек-номер придет на e-mail.",
+    delivery: DELIVERY_TEXT,
   },
   "over-sweatpants": {
     cover: "/assets/pants-1.png",
     hover: "/assets/pants-2.png",
     gallery: ["/assets/pants-1.png", "/assets/pants-2.png"],
     care: CARE_TEXT,
-    delivery: "Доставка до пункта выдачи: 2-5 рабочих дней по РФ. Трек-номер придет на e-mail.",
+    delivery: DELIVERY_TEXT,
   },
 };
 

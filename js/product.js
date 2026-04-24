@@ -19,6 +19,14 @@ const formatCareText = (text) =>
     .map((line) => line.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char])))
     .join("<br>")}</div>`;
 
+const formatDeliveryText = (text) =>
+  `<div class="delivery-text">${String(text || "")
+    .split(/\n{2,}/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char])))
+    .join("<br>")}</div>`;
+
 const renderProduct = async () => {
   const slug = getProductSlug();
   if (!slug) throw new Error("Не указан id товара");
@@ -58,7 +66,7 @@ const renderProduct = async () => {
     );
   }
   if (deliveryContent) {
-    deliveryContent.innerHTML = formatTabText(
+    deliveryContent.innerHTML = formatDeliveryText(
       media.delivery || "Доставка до пункта выдачи: 2-5 рабочих дней по РФ."
     );
   }
