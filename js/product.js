@@ -3,6 +3,14 @@ const getProductSlug = () => {
   return params.get("id");
 };
 
+const formatTabText = (text) =>
+  String(text || "")
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${paragraph.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char]))}</p>`)
+    .join("");
+
 const renderProduct = async () => {
   const slug = getProductSlug();
   if (!slug) throw new Error("Не указан id товара");
@@ -37,12 +45,14 @@ const renderProduct = async () => {
   }
   if (description) description.textContent = product.description;
   if (careContent) {
-    careContent.textContent =
-      media.care || "Деликатный уход. Следуйте рекомендациям на внутренней бирке.";
+    careContent.innerHTML = formatTabText(
+      media.care || "Деликатный уход. Следуйте рекомендациям на внутренней бирке."
+    );
   }
   if (deliveryContent) {
-    deliveryContent.textContent =
-      media.delivery || "Доставка до пункта выдачи: 2-5 рабочих дней по РФ.";
+    deliveryContent.innerHTML = formatTabText(
+      media.delivery || "Доставка до пункта выдачи: 2-5 рабочих дней по РФ."
+    );
   }
 
   if (galleryGrid) {
