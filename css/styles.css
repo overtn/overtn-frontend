@@ -2003,6 +2003,17 @@ body.gallery-open {
     grid-template-columns: 1fr;
   }
 
+  .checkout-item-meta {
+    min-height: 72px;
+    padding-bottom: 34px;
+  }
+
+  .checkout-item-actions {
+    top: auto;
+    bottom: 0;
+    transform: none;
+  }
+
   .form-inline.two-cols {
     grid-template-columns: 1fr;
   }
