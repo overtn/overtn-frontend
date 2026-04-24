@@ -2074,6 +2074,10 @@ body.gallery-open {
     grid-template-columns: 1fr;
   }
 
+  .page-hero h1 {
+    font-size: 24px;
+  }
+
   .checkout-form input,
   .checkout-form textarea,
   .checkout-form select,
