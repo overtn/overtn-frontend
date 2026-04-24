@@ -1911,6 +1911,14 @@ body.gallery-open {
     transform: translate(-50%, 0);
   }
 
+  .cart-close,
+  .cart-close:hover,
+  .cart-close:focus,
+  .cart-close:active {
+    color: #000000;
+    -webkit-text-fill-color: #000000;
+  }
+
   .footer-logo {
     width: min(340px, 64vw);
     left: 50%;
