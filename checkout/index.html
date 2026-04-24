@@ -825,6 +825,7 @@
         ].filter(Boolean).join("");
         return `
           <div class="pvz-map-balloon">
+            <button type="button" class="pvz-map-popup-close" data-map-pvz-close aria-label="Закрыть">×</button>
             <strong>${title}</strong>
             ${details}
             <button type="button" class="pvz-map-select" data-map-pvz-select="${pvz.code}">Выбрать</button>
@@ -1639,6 +1640,11 @@
       });
 
       mapSlot?.addEventListener("click", (event) => {
+        const closeButton = event.target.closest("[data-map-pvz-close]");
+        if (closeButton) {
+          closeMobilePvzPopup();
+          return;
+        }
         const target = event.target.closest("[data-map-pvz-select]");
         if (!target) return;
         const code = target.getAttribute("data-map-pvz-select") || "";

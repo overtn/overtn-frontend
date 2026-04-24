@@ -1526,8 +1526,8 @@ body.gallery-open {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 180px;
-    max-width: 180px;
+    width: 200px;
+    max-width: min(200px, calc(100% - 32px));
     z-index: 20;
     display: none;
     pointer-events: auto;
@@ -1546,6 +1546,7 @@ body.gallery-open {
     border-radius: 18px;
     box-shadow: 0 16px 36px rgba(20, 16, 14, 0.16);
     padding: 12px;
+    position: relative;
   }
 
   .pvz-map-popup .pvz-map-select,
@@ -1554,6 +1555,33 @@ body.gallery-open {
     max-width: 100%;
     display: inline-flex;
     align-self: flex-start;
+  }
+
+  .pvz-map-popup-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #000000;
+    -webkit-text-fill-color: #000000;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .pvz-map-popup-close:hover,
+  .pvz-map-popup-close:focus,
+  .pvz-map-popup-close:active {
+    color: #000000;
+    -webkit-text-fill-color: #000000;
   }
 }
 
