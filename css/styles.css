@@ -1519,6 +1519,14 @@ body.gallery-open {
   cursor: pointer;
 }
 
+@media (max-width: 980px) {
+  .ymaps-2-1-79-balloon__content .pvz-map-balloon {
+    width: min(236px, calc(100vw - 124px));
+    max-width: calc(100vw - 124px);
+    margin: -18px auto 0;
+  }
+}
+
 .checkout-total {
   margin-top: 12px;
 }
