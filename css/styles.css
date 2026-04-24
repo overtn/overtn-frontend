@@ -1971,6 +1971,24 @@ body.gallery-open {
     margin-bottom: 40px;
   }
 
+  .checkout-nav-btn,
+  .checkout-nav-btn:hover,
+  .checkout-nav-btn:focus,
+  .checkout-nav-btn:active,
+  .promo-row button,
+  .promo-row button:hover,
+  .promo-row button:focus,
+  .promo-row button:active,
+  .checkout-item-actions button,
+  .checkout-item-actions button:hover,
+  .checkout-item-actions button:focus,
+  .checkout-item-actions button:active {
+    color: #000000;
+    fill: #000000;
+    stroke: #000000;
+    -webkit-text-fill-color: #000000;
+  }
+
   .footer {
     margin-top: 0;
   }
