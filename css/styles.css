@@ -1520,10 +1520,25 @@ body.gallery-open {
 }
 
 @media (max-width: 980px) {
+  .ymaps-2-1-79-balloon__layout {
+    transform: translateY(-36px);
+  }
+
+  .ymaps-2-1-79-balloon__content {
+    width: min(210px, calc(100vw - 150px)) !important;
+    max-width: calc(100vw - 150px) !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+  }
+
+  .ymaps-2-1-79-balloon__tail {
+    transform: translateY(-36px);
+  }
+
   .ymaps-2-1-79-balloon__content .pvz-map-balloon {
-    width: min(210px, calc(100vw - 150px));
-    max-width: calc(100vw - 150px);
-    margin: -36px auto 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
   }
 }
 
