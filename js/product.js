@@ -144,6 +144,7 @@ const initZoom = () => {
   let isPointerSwipe = false;
   let activePointerId = null;
   let suppressStageClick = false;
+  let lockedScrollY = 0;
 
   const refreshImages = () => {
     zoomImages = Array.from(document.querySelectorAll("[data-gallery-grid] [data-zoom]"));
@@ -166,13 +167,27 @@ const initZoom = () => {
     renderIndex();
     viewer.classList.add("active");
     viewer.setAttribute("aria-hidden", "false");
-    document.body.classList.add("viewer-open");
+    lockedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.documentElement.classList.add("gallery-open");
+    document.body.classList.add("gallery-open");
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${lockedScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
   };
 
   const closeViewer = () => {
     viewer.classList.remove("active");
     viewer.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("viewer-open");
+    document.documentElement.classList.remove("gallery-open");
+    document.body.classList.remove("gallery-open");
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    window.scrollTo(0, lockedScrollY);
     resetPointer();
   };
 
