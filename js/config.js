@@ -21,8 +21,10 @@ const matchesApiPattern = (path, patterns) => patterns.some((pattern) => pattern
 
 const getRequestMethod = (options) => (options.method || "GET").toUpperCase();
 
+const sleep = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 const getRequestTimeoutMs = (path, method) => {
-  if (method !== "GET" && !matchesApiPattern(path, SHIPPING_TIMEOUT_PATTERNS)) return 5000;
+  if (method === "GET") return 15000;
   if (matchesApiPattern(path, SHIPPING_TIMEOUT_PATTERNS)) return 7000;
   return 5000;
 };
@@ -119,6 +121,8 @@ window.apiRequest = async (path, options = {}) => {
       if (attempt >= maxAttempts) {
         throw error;
       }
+
+      await sleep(400);
     }
   }
 
