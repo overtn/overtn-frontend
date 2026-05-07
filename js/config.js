@@ -4,13 +4,6 @@ window.APP_CONFIG = {
   YANDEX_MAPS_API_KEY: "637834d8-c3a6-4c2d-a00c-75e578cebcad",
 };
 
-const API_RETRYABLE_GET_PATTERNS = [
-  /^\/api\/v1\/catalog\/products(?:\/[^/?#]+)?(?:\?.*)?$/,
-  /^\/api\/v1\/shipping\/cdek\/cities(?:\?.*)?$/,
-  /^\/api\/v1\/shipping\/cdek\/pvz(?:\?.*)?$/,
-  /^\/api\/v1\/shipping\/address-suggest(?:\?.*)?$/,
-];
-
 const SHIPPING_TIMEOUT_PATTERNS = [
   /^\/api\/v1\/shipping\/cdek\/cities(?:\?.*)?$/,
   /^\/api\/v1\/shipping\/cdek\/pvz(?:\?.*)?$/,
@@ -48,9 +41,6 @@ const getRequestTimeoutMs = (path, method) => {
   if (matchesApiPattern(path, SHIPPING_TIMEOUT_PATTERNS)) return 20000;
   return 20000;
 };
-
-const shouldRetryRequest = (path, method) =>
-  method === "GET" && matchesApiPattern(path, API_RETRYABLE_GET_PATTERNS);
 
 const isRetriableNetworkError = (error) => {
   const message = (error?.message || String(error || "")).toLowerCase();
@@ -106,102 +96,105 @@ const withTimeoutSignal = (signal, timeoutMs) => {
 };
 
 window.apiRequest = async (path, options = {}) => {
+  if (options.signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
   const method = getRequestMethod(options);
   const timeoutMs = getRequestTimeoutMs(path, method);
   const useFallback = method === "GET";
-  const baseUrls = [
-    window.APP_CONFIG.API_BASE_URL.replace(/\/+$/, ""),
-    ...(useFallback ? [window.APP_CONFIG.API_FALLBACK_BASE_URL.replace(/\/+$/, "")] : []),
-  ];
+  const primaryBaseUrl = window.APP_CONFIG.API_BASE_URL.replace(/\/+$/, "");
+  const fallbackBaseUrl = window.APP_CONFIG.API_FALLBACK_BASE_URL.replace(/\/+$/, "");
 
-  let lastError;
-  for (let baseIndex = 0; baseIndex < baseUrls.length; baseIndex += 1) {
-    const baseUrl = baseUrls[baseIndex];
-    const fallbackUsed = baseIndex > 0;
-    const maxAttempts = !fallbackUsed && shouldRetryRequest(path, method) ? 2 : 1;
+  const performAttempt = async ({ baseUrl, attempt, fallbackUsed }) => {
+    const url = `${baseUrl}${path}`;
+    let durationMs = 0;
+    const startedAt = performance.now();
+    const timeoutState = withTimeoutSignal(options.signal, timeoutMs);
+    const requestOptions = {
+      cache: "no-store",
+      ...options,
+      signal: timeoutState.signal,
+    };
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const url = `${baseUrl}${path}`;
-      let durationMs = 0;
-      const startedAt = performance.now();
-      const timeoutState = withTimeoutSignal(options.signal, timeoutMs);
-      const requestOptions = {
-        cache: "no-store",
-        ...options,
-        signal: timeoutState.signal,
-      };
+    try {
+      const response = await fetch(url, requestOptions);
+      durationMs = Math.round(performance.now() - startedAt);
+      timeoutState.cleanup();
 
-      try {
-        const response = await fetch(url, requestOptions);
-        durationMs = Math.round(performance.now() - startedAt);
-        timeoutState.cleanup();
+      const contentType = response.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+      const payload = isJson ? await response.json() : await response.text();
 
-        const contentType = response.headers.get("content-type") || "";
-        const isJson = contentType.includes("application/json");
-        const payload = isJson ? await response.json() : await response.text();
-
-        if (!response.ok) {
-          console.error("[apiRequest] http error", {
-            baseUrl,
-            path,
-            attempt,
-            durationMs,
-            status: response.status,
-            responseURL: response.url,
-            reason: `HTTP ${response.status}`,
-            fallbackUsed,
-          });
-          const message =
-            (typeof payload === "object" && payload !== null && (payload.message || payload.error)) ||
-            (typeof payload === "string" && payload) ||
-            `HTTP ${response.status}`;
-          const error = new Error(message);
-          error.status = response.status;
-          error.payload = payload;
-          throw error;
-        }
-
-        return payload;
-      } catch (error) {
-        timeoutState.cleanup();
-        durationMs = Math.round(performance.now() - startedAt);
-        const timedOut = timeoutState.didTimeout();
-        const abortedByCaller = error?.name === "AbortError" && !timedOut;
-
-        if (abortedByCaller) {
-          throw error;
-        }
-
-        if (timedOut && error?.name === "AbortError") {
-          error = createTimeoutError(url, timeoutMs);
-        }
-
-        const reason = timedOut ? "timeout" : error?.message || String(error);
-        const retriableNetworkError = isRetriableNetworkError(error);
-        lastError = error;
-
-        console.error("[apiRequest] fetch failure", {
+      if (!response.ok) {
+        console.error("[apiRequest] http error", {
           baseUrl,
           path,
           attempt,
           durationMs,
-          reason,
+          status: response.status,
+          responseURL: response.url,
+          reason: `HTTP ${response.status}`,
           fallbackUsed,
         });
-
-        if (attempt < maxAttempts) {
-          await sleep(400, options.signal);
-          continue;
-        }
-
-        if (!fallbackUsed && useFallback && retriableNetworkError) {
-          break;
-        }
-
+        const message =
+          (typeof payload === "object" && payload !== null && (payload.message || payload.error)) ||
+          (typeof payload === "string" && payload) ||
+          `HTTP ${response.status}`;
+        const error = new Error(message);
+        error.status = response.status;
+        error.payload = payload;
         throw error;
       }
-    }
-  }
 
-  throw lastError || new Error("Request failed");
+      return payload;
+    } catch (error) {
+      timeoutState.cleanup();
+      durationMs = Math.round(performance.now() - startedAt);
+      const timedOut = timeoutState.didTimeout();
+      const abortedByCaller = error?.name === "AbortError" && !timedOut;
+
+      if (abortedByCaller) {
+        throw error;
+      }
+
+      if (timedOut && error?.name === "AbortError") {
+        error = createTimeoutError(url, timeoutMs);
+      }
+
+      const reason = timedOut ? "timeout" : error?.message || String(error);
+      console.error("[apiRequest] fetch failure", {
+        baseUrl,
+        path,
+        attempt,
+        durationMs,
+        reason,
+        fallbackUsed,
+      });
+      throw error;
+    }
+  };
+
+  try {
+    // DIAGNOSTIC_API_REQUEST
+    // Keep GET flow intentionally simple during investigation:
+    // one primary attempt, then one fallback attempt only after a real network/timeout failure.
+    return await performAttempt({
+      baseUrl: primaryBaseUrl,
+      attempt: 1,
+      fallbackUsed: false,
+    });
+  } catch (error) {
+    if (!useFallback || options.signal?.aborted || !isRetriableNetworkError(error)) {
+      throw error;
+    }
+
+    await sleep(400, options.signal);
+
+    return performAttempt({
+      baseUrl: fallbackBaseUrl,
+      attempt: 2,
+      fallbackUsed: true,
+    });
+  }
 };
