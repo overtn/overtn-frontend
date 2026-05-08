@@ -1,6 +1,5 @@
 window.APP_CONFIG = {
   API_BASE_URL: "https://api.overtn.ru",
-  API_FALLBACK_BASE_URL: "https://overtn-overtn-backend-6746.twc1.net",
   YANDEX_MAPS_API_KEY: "637834d8-c3a6-4c2d-a00c-75e578cebcad",
 };
 
@@ -40,21 +39,6 @@ const getRequestTimeoutMs = (path, method) => {
   if (method === "GET") return 15000;
   if (matchesApiPattern(path, SHIPPING_TIMEOUT_PATTERNS)) return 20000;
   return 20000;
-};
-
-const isRetriableNetworkError = (error) => {
-  const message = (error?.message || String(error || "")).toLowerCase();
-  return (
-    error?.code === "ETIMEDOUT" ||
-    error?.name === "TypeError" ||
-    message.includes("failed to fetch") ||
-    message.includes("networkerror") ||
-    message.includes("network error") ||
-    message.includes("err_connection_closed") ||
-    message.includes("connection closed") ||
-    message.includes("timed out") ||
-    message.includes("timeout")
-  );
 };
 
 const createTimeoutError = (url, timeoutMs) => {
@@ -102,11 +86,10 @@ window.apiRequest = async (path, options = {}) => {
 
   const method = getRequestMethod(options);
   const timeoutMs = getRequestTimeoutMs(path, method);
-  const useFallback = method === "GET";
-  const primaryBaseUrl = window.APP_CONFIG.API_BASE_URL.replace(/\/+$/, "");
-  const fallbackBaseUrl = window.APP_CONFIG.API_FALLBACK_BASE_URL.replace(/\/+$/, "");
+  const baseUrl = window.APP_CONFIG.API_BASE_URL.replace(/\/+$/, "");
+  const maxAttempts = method === "GET" ? 2 : 1;
 
-  const performAttempt = async ({ baseUrl, attempt, fallbackUsed }) => {
+  const performAttempt = async ({ attempt }) => {
     const url = `${baseUrl}${path}`;
     let durationMs = 0;
     const startedAt = performance.now();
@@ -128,14 +111,12 @@ window.apiRequest = async (path, options = {}) => {
 
       if (!response.ok) {
         console.error("[apiRequest] http error", {
-          baseUrl,
           path,
           attempt,
           durationMs,
           status: response.status,
           responseURL: response.url,
           reason: `HTTP ${response.status}`,
-          fallbackUsed,
         });
         const message =
           (typeof payload === "object" && payload !== null && (payload.message || payload.error)) ||
@@ -164,37 +145,29 @@ window.apiRequest = async (path, options = {}) => {
 
       const reason = timedOut ? "timeout" : error?.message || String(error);
       console.error("[apiRequest] fetch failure", {
-        baseUrl,
         path,
         attempt,
         durationMs,
         reason,
-        fallbackUsed,
+        timeout: timedOut,
+        networkError: !timedOut,
       });
       throw error;
     }
   };
 
-  try {
-    // DIAGNOSTIC_API_REQUEST
-    // Keep GET flow intentionally simple during investigation:
-    // one primary attempt, then one fallback attempt only after a real network/timeout failure.
-    return await performAttempt({
-      baseUrl: primaryBaseUrl,
-      attempt: 1,
-      fallbackUsed: false,
-    });
-  } catch (error) {
-    if (!useFallback || options.signal?.aborted || !isRetriableNetworkError(error)) {
-      throw error;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await performAttempt({ attempt });
+    } catch (error) {
+      const isUserAbort = error?.name === "AbortError" && options.signal?.aborted;
+      if (attempt >= maxAttempts || method !== "GET" || isUserAbort) {
+        throw error;
+      }
+
+      await sleep(400, options.signal);
     }
-
-    await sleep(400, options.signal);
-
-    return performAttempt({
-      baseUrl: fallbackBaseUrl,
-      attempt: 2,
-      fallbackUsed: true,
-    });
   }
+
+  throw new Error("Request failed");
 };
