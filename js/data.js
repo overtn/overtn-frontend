@@ -21,7 +21,12 @@ const PRODUCT_MEDIA = {
   "over-sweatshirt": {
     cover: "/assets/sweatshirt-1.png",
     hover: "/assets/sweatshirt-2.png",
-    gallery: ["/assets/sweatshirt-1.png", "/assets/sweatshirt-2.png"],
+    gallery: [
+      "/assets/sweatshirt-1.png",
+      "/assets/sweatshirt-2.png",
+      "/assets/IMG_5845.jpg",
+      "/assets/IMG_5829 2.jpg",
+    ],
     care: CARE_TEXT,
     delivery: DELIVERY_TEXT,
   },
