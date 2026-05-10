@@ -9,12 +9,12 @@ const initSlider = () => {
       ${sliderItems
     .map(
       (item, index) => `
-      <a class="slide ${index === 0 ? "active" : ""}" href="${item.link}" data-slide-index="${index}">
+      <div class="slide ${index === 0 ? "active" : ""}" data-slide-index="${index}">
         <div class="slide-content" style="background-image: url('${item.image}')">
           <h3>${item.title}</h3>
           <span>${item.subtitle}</span>
         </div>
-      </a>`
+      </div>`
     )
     .join("")}
     </div>`;
