@@ -266,7 +266,7 @@ const getProductImageAttrs = (index, kind = "base") => {
 const initProducts = async () => {
   const grid = document.querySelector("[data-products]");
   if (!grid) return;
-  grid.innerHTML = `<div class="muted">Загружаем товары. Если сервер только что запустился, это может занять до 60 секунд…</div>`;
+  grid.innerHTML = `<div class="muted">Подождите, пока товары загрузятся. Включенный VPN может влиять на работу сайта</div>`;
   const slowTimer = setTimeout(() => {
     grid.innerHTML = `<div class="muted">Сервер просыпается. Пожалуйста, подождите еще немного…</div>`;
   }, 10000);
