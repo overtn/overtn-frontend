@@ -723,6 +723,7 @@ a {
   grid-template-columns: 1.1fr 1fr;
   gap: 30px;
   margin-top: 10px;
+  padding-bottom: 72px;
 }
 
 .gallery-grid {
@@ -2055,6 +2056,10 @@ body.gallery-open {
   .footer-grid,
   .product-page {
     grid-template-columns: 1fr;
+  }
+
+  .product-page {
+    padding-bottom: 56px;
   }
 
   .section-title {
