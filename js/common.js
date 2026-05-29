@@ -1,4 +1,10 @@
 const cartKey = "brand-cart";
+const metrikaCounterId = 109499781;
+
+const reachMetrikaGoal = (goal) => {
+  if (typeof window.ym !== "function") return;
+  window.ym(metrikaCounterId, "reachGoal", goal);
+};
 
 const getCart = () => JSON.parse(localStorage.getItem(cartKey) || "[]");
 const setCart = (items) => localStorage.setItem(cartKey, JSON.stringify(items));
@@ -222,6 +228,7 @@ const addToCart = (product, size = null) => {
   updateCartCount();
   renderCartDrawer();
   showToast("Товар добавлен в корзину");
+  reachMetrikaGoal("add_to_cart");
   return true;
 };
 
@@ -255,6 +262,15 @@ const initCartActions = () => {
   });
 };
 
+const initMetrikaGoalLinks = () => {
+  document.querySelectorAll('.nav a[href*="t.me"]').forEach((link) => {
+    link.addEventListener("click", () => reachMetrikaGoal("click_telegram"));
+  });
+  document.querySelectorAll('.nav a[href*="instagram.com"]').forEach((link) => {
+    link.addEventListener("click", () => reachMetrikaGoal("click_instagram"));
+  });
+};
+
 const initTrackingModal = () => {
   const trigger = document.querySelector("[data-tracking-open]");
   const modal = document.querySelector("[data-tracking-modal]");
@@ -273,6 +289,7 @@ const initTrackingModal = () => {
 const initCommonUi = () => {
   initMobileNav();
   initCartActions();
+  initMetrikaGoalLinks();
   initTrackingModal();
   updateCartCount();
 };
