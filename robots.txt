@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Disallow: /checkout/
+Disallow: /payment-success/
+
+Sitemap: https://overtn.ru/sitemap.xml
