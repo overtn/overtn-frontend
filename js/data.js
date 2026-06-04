@@ -19,10 +19,10 @@ const DELIVERY_TEXT = [
 
 const PRODUCT_MEDIA = {
   "over-sweatshirt": {
-    cover: "/assets/sweatshirt-1.png",
+    cover: "/assets/Свитшот1.webp",
     hover: "/assets/sweatshirt-2.png",
     gallery: [
-      "/assets/sweatshirt-1.png",
+      "/assets/Свитшот1.webp",
       "/assets/sweatshirt-2.png",
       "/assets/IMG_5845.jpg",
       "/assets/IMG_5829 2.jpg",
