@@ -52,6 +52,6 @@ const getProductMedia = (slug) => ({
 });
 
 const sliderItems = [
-  { title: "", subtitle: "", image: "/assets/slider-1.png", link: "/buyers/" },
+  { title: "", subtitle: "", image: "/assets/Слайдер1.webp", link: "/buyers/" },
   { title: "", subtitle: "", image: "/assets/slider-2.png", link: "/support/" },
 ];
