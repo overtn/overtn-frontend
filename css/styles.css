@@ -254,6 +254,11 @@ a {
   margin-top: auto;
   font-size: 13px;
   letter-spacing: 0.04em;
+  border-color: transparent;
+}
+
+.hero-main .cta:hover {
+  border-color: transparent;
 }
 
 .hero-slider {
