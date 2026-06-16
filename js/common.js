@@ -1,5 +1,6 @@
 const cartKey = "brand-cart";
 const metrikaCounterId = 109499781;
+let salesStopped = localStorage.getItem("overtn_sales_stopped") === "true";
 
 const reachMetrikaGoal = (goal) => {
   if (typeof window.ym !== "function") return;
@@ -108,7 +109,11 @@ const renderCartDrawer = () => {
   const finalTotal = Math.max(total - discount, 0);
 
   if (discountEl) {
-    discountEl.textContent = discount > 0 ? `Скидка 10% за комплект: -${discount.toLocaleString("ru-RU")} RUB` : "";
+    discountEl.textContent = salesStopped
+      ? "Оформление заказов временно недоступно. Попробуйте позже."
+      : discount > 0
+        ? `Скидка 10% за комплект: -${discount.toLocaleString("ru-RU")} RUB`
+        : "";
   }
 
   if (cart.length === 0) {
@@ -120,10 +125,15 @@ const renderCartDrawer = () => {
   }
 
   if (checkoutLink) {
-    checkoutLink.classList.toggle("disabled", cart.length === 0);
-    checkoutLink.setAttribute("aria-disabled", cart.length === 0 ? "true" : "false");
+    checkoutLink.classList.toggle("disabled", cart.length === 0 || salesStopped);
+    checkoutLink.setAttribute("aria-disabled", cart.length === 0 || salesStopped ? "true" : "false");
   }
 };
+
+window.addEventListener("overtn:site-status", (event) => {
+  salesStopped = Boolean(event.detail?.salesStopped);
+  renderCartDrawer();
+});
 
 const toggleCartDrawer = (forceOpen = null) => {
   const drawer = document.querySelector(".cart-drawer");

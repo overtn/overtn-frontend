@@ -1,7 +1,8 @@
 (function () {
   const bypassKey = "overtn_maintenance_bypass";
+  const salesStoppedKey = "overtn_sales_stopped";
   const apiBase = window.APP_CONFIG?.API_BASE_URL?.replace(/\/+$/, "");
-  if (!apiBase || localStorage.getItem(bypassKey) === "true") return;
+  if (!apiBase) return;
 
   const requestJson = async (path, options = {}) => {
     const response = await fetch(`${apiBase}${path}`, {
@@ -111,7 +112,10 @@
   const checkStatus = async () => {
     try {
       const status = await requestJson("/api/v1/site-status");
-      if (status.maintenanceMode) showGate();
+      window.OVERTN_SITE_STATUS = status;
+      localStorage.setItem(salesStoppedKey, status.salesStopped ? "true" : "false");
+      window.dispatchEvent(new CustomEvent("overtn:site-status", { detail: status }));
+      if (status.maintenanceMode && localStorage.getItem(bypassKey) !== "true") showGate();
     } catch (error) {
       console.warn("[maintenance] status check failed", error);
     }

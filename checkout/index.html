@@ -309,6 +309,7 @@
       let quoteRequestId = 0;
       let streetSuggestUnavailable = false;
       let houseSuggestUnavailable = false;
+      let salesStopped = Boolean(window.OVERTN_SITE_STATUS?.salesStopped) || localStorage.getItem("overtn_sales_stopped") === "true";
 
       const state = {
         city: { items: [], filtered: [], visibleCount: 20, activeIndex: -1, controller: null, requestSeq: 0, timer: null },
@@ -435,6 +436,13 @@
       const setError = (text) => {
         checkoutError.textContent = text || "";
         checkoutResult.textContent = "";
+      };
+      const renderSalesStoppedState = () => {
+        if (salesStopped) {
+          setError("Оформление заказов временно недоступно. Попробуйте позже.");
+        } else if (checkoutError.textContent === "Оформление заказов временно недоступно. Попробуйте позже.") {
+          checkoutError.textContent = "";
+        }
       };
 
       const formatPhoneLocal = (digits) => {
@@ -1562,7 +1570,8 @@
         const cartOk = getCart().length > 0;
         const shippingOk = Boolean(shippingQuote?.shippingCostMinor);
 
-        submitBtn.disabled = !(emailOk && phoneOk && recipientOk && cityOk && methodOk && pvzOk && courierOk && consentOk && cartOk && shippingOk);
+        submitBtn.disabled = salesStopped || !(emailOk && phoneOk && recipientOk && cityOk && methodOk && pvzOk && courierOk && consentOk && cartOk && shippingOk);
+        renderSalesStoppedState();
 
         showFieldError("email", (submitted || touched.email) && !emailOk);
         showFieldError("phone", (submitted || touched.phone) && !phoneOk);
@@ -1618,6 +1627,12 @@
           showShippingError("");
         }
       };
+
+      window.addEventListener("overtn:site-status", (event) => {
+        salesStopped = Boolean(event.detail?.salesStopped);
+        renderSalesStoppedState();
+        validateForm();
+      });
 
       const getShippingPayload = () => {
         const method = getShippingMethod();
