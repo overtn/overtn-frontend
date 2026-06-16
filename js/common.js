@@ -18,6 +18,34 @@ const normalizeCartItems = (items) => items.map((item) => ({
   image: resolveCartItemImage(item),
 }));
 
+const sweatshirtSlugs = new Set(["arc-sweatshirt", "over-sweatshirt"]);
+const sweatpantsSlugs = new Set(["arc-sweatpants", "over-big-sweatpants", "over-sweatpants"]);
+
+const calculateBundleDiscount = (cart) => {
+  const sweatshirtPrices = [];
+  const sweatpantsPrices = [];
+  cart.forEach((item) => {
+    const target = sweatshirtSlugs.has(item.id)
+      ? sweatshirtPrices
+      : sweatpantsSlugs.has(item.id)
+        ? sweatpantsPrices
+        : null;
+    if (!target) return;
+    const qty = Number(item.qty || 0);
+    const price = Number(item.numericPrice || 0);
+    for (let i = 0; i < qty; i += 1) target.push(price);
+  });
+  const bundleCount = Math.min(sweatshirtPrices.length, sweatpantsPrices.length);
+  if (!bundleCount) return 0;
+  sweatshirtPrices.sort((a, b) => b - a);
+  sweatpantsPrices.sort((a, b) => b - a);
+  let bundleSubtotal = 0;
+  for (let i = 0; i < bundleCount; i += 1) {
+    bundleSubtotal += sweatshirtPrices[i] + sweatpantsPrices[i];
+  }
+  return Math.round(bundleSubtotal * 0.1);
+};
+
 const getCart = () => {
   const stored = JSON.parse(localStorage.getItem(cartKey) || "[]");
   const normalized = normalizeCartItems(stored);
@@ -76,13 +104,11 @@ const renderCartDrawer = () => {
     total += item.numericPrice * item.qty;
   });
 
-  const hasBoth = cart.some((item) => item.id === "over-big-sweatpants") && cart.some((item) => item.id === "over-sweatshirt");
-  let discount = 0;
-  if (hasBoth) discount = total * 0.1;
+  const discount = calculateBundleDiscount(cart);
   const finalTotal = Math.max(total - discount, 0);
 
   if (discountEl) {
-    discountEl.textContent = hasBoth ? `Скидка 10% за комплект: -${discount.toLocaleString("ru-RU")} RUB` : "";
+    discountEl.textContent = discount > 0 ? `Скидка 10% за комплект: -${discount.toLocaleString("ru-RU")} RUB` : "";
   }
 
   if (cart.length === 0) {

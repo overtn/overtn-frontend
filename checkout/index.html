@@ -191,7 +191,7 @@
             <div><span>Товары</span><strong data-subtotal>0 RUB</strong></div>
             <div><span>Доставка</span><strong data-shipping>—</strong></div>
             <div class="muted checkout-summary-detail" data-shipping-summary></div>
-            <div data-discount-row hidden><span>Скидка</span><strong data-discount>0 RUB</strong></div>
+            <div data-discount-row hidden><span data-discount-label>Скидка</span><strong data-discount>0 RUB</strong></div>
             <div class="checkout-total"><span>Итого</span><strong data-total>0 RUB</strong></div>
           </div>
         </aside>
@@ -215,6 +215,7 @@
       const shippingEl = document.querySelector("[data-shipping]");
       const shippingSummaryEl = document.querySelector("[data-shipping-summary]");
       const discountRow = document.querySelector("[data-discount-row]");
+      const discountLabel = document.querySelector("[data-discount-label]");
       const discountEl = document.querySelector("[data-discount]");
       const totalEl = document.querySelector("[data-total]");
       const submitBtn = document.querySelector("[data-submit]");
@@ -341,7 +342,41 @@
       const getShippingMethod = () => shippingMethod;
       const parsePhoneDigits = (value) => (value || "").replace(/\D/g, "").slice(0, 10);
       const getSubtotal = () => getCart().reduce((sum, item) => sum + Number(item.numericPrice || 0) * Number(item.qty || 0), 0);
-      const getDiscount = () => (appliedPromo ? Math.round((getSubtotal() * appliedPromo.discountPercent) / 100) : 0);
+      const sweatshirtSlugs = new Set(["arc-sweatshirt", "over-sweatshirt"]);
+      const sweatpantsSlugs = new Set(["arc-sweatpants", "over-big-sweatpants", "over-sweatpants"]);
+      const calculateBundleDiscount = (cart) => {
+        const sweatshirtPrices = [];
+        const sweatpantsPrices = [];
+        cart.forEach((item) => {
+          const target = sweatshirtSlugs.has(item.id)
+            ? sweatshirtPrices
+            : sweatpantsSlugs.has(item.id)
+              ? sweatpantsPrices
+              : null;
+          if (!target) return;
+          const qty = Number(item.qty || 0);
+          const price = Number(item.numericPrice || 0);
+          for (let i = 0; i < qty; i += 1) target.push(price);
+        });
+        const bundleCount = Math.min(sweatshirtPrices.length, sweatpantsPrices.length);
+        if (!bundleCount) return 0;
+        sweatshirtPrices.sort((a, b) => b - a);
+        sweatpantsPrices.sort((a, b) => b - a);
+        let bundleSubtotal = 0;
+        for (let i = 0; i < bundleCount; i += 1) {
+          bundleSubtotal += sweatshirtPrices[i] + sweatpantsPrices[i];
+        }
+        return Math.round(bundleSubtotal * 0.1);
+      };
+      const getAppliedDiscount = () => {
+        const cart = getCart();
+        const bundleDiscount = calculateBundleDiscount(cart);
+        const promoDiscount = appliedPromo ? Math.round((getSubtotal() * appliedPromo.discountPercent) / 100) : 0;
+        if (bundleDiscount > promoDiscount) return { amount: bundleDiscount, type: "bundle_discount" };
+        if (promoDiscount > 0) return { amount: promoDiscount, type: "promo_discount" };
+        return { amount: 0, type: null };
+      };
+      const getDiscount = () => getAppliedDiscount().amount;
       const normalizeQuery = (value) => (value || "").trim().replace(/\s+/g, " ");
       const extractStreetOnly = (value) => {
         const raw = normalizeQuery(value);
@@ -455,12 +490,16 @@
       const rerenderSummary = () => {
         const subtotal = getSubtotal();
         const shippingCost = shippingQuote?.shippingCostMinor ? Math.round(shippingQuote.shippingCostMinor / 100) : 0;
-        const discount = getDiscount();
+        const appliedDiscount = getAppliedDiscount();
+        const discount = appliedDiscount.amount;
         const total = Math.max(subtotal - discount + shippingCost, 0);
         subtotalEl.textContent = formatRub(subtotal);
         shippingEl.textContent = shippingCost ? formatRub(shippingCost) : "—";
         shippingSummaryEl.innerHTML = renderShippingSummaryHtml();
         discountRow.hidden = discount <= 0;
+        if (discountLabel) {
+          discountLabel.textContent = appliedDiscount.type === "bundle_discount" ? "Скидка за комплект" : "Промокод";
+        }
         discountEl.textContent = `-${formatRub(discount)}`;
         totalEl.textContent = formatRub(total);
       };
