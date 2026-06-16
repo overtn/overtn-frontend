@@ -6,7 +6,26 @@ const reachMetrikaGoal = (goal) => {
   window.ym(metrikaCounterId, "reachGoal", goal);
 };
 
-const getCart = () => JSON.parse(localStorage.getItem(cartKey) || "[]");
+const resolveCartItemImage = (item) => {
+  const slug = item.id || "";
+  const media = typeof getProductMedia === "function" ? getProductMedia(slug) : null;
+  if (media?.cover && !media.cover.includes("logo-placeholder")) return media.cover;
+  return item.image || "/assets/logo-placeholder.svg";
+};
+
+const normalizeCartItems = (items) => items.map((item) => ({
+  ...item,
+  image: resolveCartItemImage(item),
+}));
+
+const getCart = () => {
+  const stored = JSON.parse(localStorage.getItem(cartKey) || "[]");
+  const normalized = normalizeCartItems(stored);
+  if (JSON.stringify(stored) !== JSON.stringify(normalized)) {
+    localStorage.setItem(cartKey, JSON.stringify(normalized));
+  }
+  return normalized;
+};
 const setCart = (items) => localStorage.setItem(cartKey, JSON.stringify(items));
 
 const updateCartCount = () => {
