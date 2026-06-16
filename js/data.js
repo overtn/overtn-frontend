@@ -17,33 +17,33 @@ const DELIVERY_TEXT = [
   "Доставка оплачивается сразу при оформлении заказа.",
 ].join("\n\n");
 
+const SWEATSHIRT_MEDIA = {
+  cover: "/assets/Свитшот1.webp",
+  hover: "/assets/sweatshirt-2.png",
+  gallery: [
+    "/assets/Свитшот1.webp",
+    "/assets/sweatshirt-2.png",
+    "/assets/IMG_5845.jpg",
+    "/assets/IMG_5829 2.jpg",
+  ],
+  care: CARE_TEXT,
+  delivery: DELIVERY_TEXT,
+};
+
+const SWEATPANTS_MEDIA = {
+  cover: "/assets/pants-1.webp",
+  hover: "/assets/pants-2.png",
+  gallery: ["/assets/pants-1.webp", "/assets/pants-2.png"],
+  care: CARE_TEXT,
+  delivery: DELIVERY_TEXT,
+};
+
 const PRODUCT_MEDIA = {
-  "over-sweatshirt": {
-    cover: "/assets/Свитшот1.webp",
-    hover: "/assets/sweatshirt-2.png",
-    gallery: [
-      "/assets/Свитшот1.webp",
-      "/assets/sweatshirt-2.png",
-      "/assets/IMG_5845.jpg",
-      "/assets/IMG_5829 2.jpg",
-    ],
-    care: CARE_TEXT,
-    delivery: DELIVERY_TEXT,
-  },
-  "over-big-sweatpants": {
-    cover: "/assets/pants-1.webp",
-    hover: "/assets/pants-2.png",
-    gallery: ["/assets/pants-1.webp", "/assets/pants-2.png"],
-    care: CARE_TEXT,
-    delivery: DELIVERY_TEXT,
-  },
-  "over-sweatpants": {
-    cover: "/assets/pants-1.webp",
-    hover: "/assets/pants-2.png",
-    gallery: ["/assets/pants-1.webp", "/assets/pants-2.png"],
-    care: CARE_TEXT,
-    delivery: DELIVERY_TEXT,
-  },
+  "arc-sweatshirt": SWEATSHIRT_MEDIA,
+  "arc-sweatpants": SWEATPANTS_MEDIA,
+  "over-sweatshirt": SWEATSHIRT_MEDIA,
+  "over-big-sweatpants": SWEATPANTS_MEDIA,
+  "over-sweatpants": SWEATPANTS_MEDIA,
 };
 
 const getProductMedia = (slug) => ({
