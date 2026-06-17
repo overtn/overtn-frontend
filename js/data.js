@@ -25,6 +25,7 @@ const SWEATSHIRT_MEDIA = {
     "/assets/sweatshirt-2.png",
     "/assets/IMG_5845.jpg",
     "/assets/IMG_5829 2.jpg",
+    "/assets/sizes-sweatshirt.webp",
   ],
   care: CARE_TEXT,
   delivery: DELIVERY_TEXT,
