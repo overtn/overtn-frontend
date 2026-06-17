@@ -33,7 +33,7 @@ const SWEATSHIRT_MEDIA = {
 const SWEATPANTS_MEDIA = {
   cover: "/assets/pants-1.webp",
   hover: "/assets/pants-2.png",
-  gallery: ["/assets/pants-1.webp", "/assets/pants-2.png"],
+  gallery: ["/assets/pants-1.webp", "/assets/pants-2.png", "/assets/sizes-pants.webp"],
   care: CARE_TEXT,
   delivery: DELIVERY_TEXT,
 };
