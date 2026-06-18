@@ -457,6 +457,14 @@ a {
   font-size: 13px;
 }
 
+.footer-grid .footer__legal-note {
+  margin: 18px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  max-width: 620px;
+}
+
 .footer-contact-lines {
   color: var(--text-muted);
   font-size: 13px;
@@ -2106,6 +2114,11 @@ body.gallery-open {
     --footer-shell-offset-y: 50px;
     margin-top: calc(-1 * var(--footer-shell-offset-y));
     padding-bottom: 130px;
+  }
+
+  .footer-grid .footer__legal-note {
+    margin-top: 16px;
+    margin-bottom: 24px;
   }
 
   .checkout-grid {
