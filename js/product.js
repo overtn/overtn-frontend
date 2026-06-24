@@ -51,7 +51,10 @@ const renderProduct = async () => {
   const product = await window.apiRequest(`/api/v1/catalog/products/${slug}`);
   clearTimeout(slowMessageTimer);
   const media = getProductMedia(product.slug);
-  const images = media.gallery && media.gallery.length ? media.gallery : [media.cover, media.hover];
+  const apiImages = Array.isArray(product.images)
+    ? product.images.map((image) => image.url).filter(Boolean)
+    : [];
+  const images = apiImages.length ? apiImages : (media.gallery && media.gallery.length ? media.gallery : [media.cover, media.hover]);
   let currentImageIndex = 0;
   const variantsBySize = new Map(product.variants.map((v) => [v.size, v]));
   const sizes = product.variants.map((v) => v.size);
