@@ -161,6 +161,12 @@ const initZoom = () => {
   const nextButton = document.querySelector("[data-viewer-next]");
   if (!viewer || !viewerImage || !stage) return;
 
+  const incomingImage = viewerImage.cloneNode(false);
+  incomingImage.removeAttribute("data-viewer-image");
+  incomingImage.setAttribute("aria-hidden", "true");
+  incomingImage.classList.add("product-viewer-image--incoming", "is-hidden", "no-transition");
+  stage.appendChild(incomingImage);
+
   let currentIndex = 0;
   let zoomImages = [];
   let pointerStartX = 0;
@@ -172,6 +178,7 @@ const initZoom = () => {
   let activePointerId = null;
   let isImageAnimating = false;
   let imageAnimationToken = 0;
+  let cleanupImageAnimation = null;
   let suppressStageClick = false;
   let lockedScrollY = 0;
   let zoomScale = 1;
@@ -197,8 +204,8 @@ const initZoom = () => {
     });
   };
 
-  const setSlideX = (value) => {
-    viewerImage.style.setProperty("--viewer-slide-x", value);
+  const setSlideX = (image, value) => {
+    image.style.setProperty("--viewer-slide-x", value);
   };
 
   const applyZoom = () => {
@@ -206,6 +213,39 @@ const initZoom = () => {
     viewerImage.style.setProperty("--viewer-pan-x", `${zoomX}px`);
     viewerImage.style.setProperty("--viewer-pan-y", `${zoomY}px`);
     viewer.classList.toggle("is-zoomed", zoomScale > 1.01);
+  };
+
+  const setImageSource = (image, item) => {
+    image.src = item.dataset.zoom || item.src;
+    image.alt = item.alt || "Фото товара";
+  };
+
+  const preloadImage = (src) =>
+    new Promise((resolve) => {
+      const image = new Image();
+      image.onload = resolve;
+      image.onerror = resolve;
+      image.src = src;
+      if (image.complete) resolve();
+    });
+
+  const resetIncomingImage = () => {
+    incomingImage.classList.add("is-hidden", "no-transition");
+    incomingImage.removeAttribute("src");
+    incomingImage.alt = "";
+    setSlideX(incomingImage, "0%");
+  };
+
+  const cancelImageAnimation = () => {
+    imageAnimationToken += 1;
+    isImageAnimating = false;
+    if (cleanupImageAnimation) {
+      cleanupImageAnimation();
+      cleanupImageAnimation = null;
+    }
+    viewerImage.classList.add("no-transition");
+    setSlideX(viewerImage, "0%");
+    resetIncomingImage();
   };
 
   const resetZoom = () => {
@@ -218,18 +258,14 @@ const initZoom = () => {
   const renderIndex = () => {
     const item = zoomImages[currentIndex];
     if (!item) return;
-    viewerImage.src = item.dataset.zoom || item.src;
-    viewerImage.alt = item.alt || "Фото товара";
+    setImageSource(viewerImage, item);
   };
 
   const openViewer = (index) => {
     refreshImages();
     if (!zoomImages.length) return;
-    imageAnimationToken += 1;
-    isImageAnimating = false;
+    cancelImageAnimation();
     currentIndex = Math.max(0, Math.min(index, zoomImages.length - 1));
-    viewerImage.classList.add("no-transition");
-    setSlideX("0%");
     resetZoom();
     renderIndex();
     viewerImage.offsetHeight;
@@ -247,10 +283,7 @@ const initZoom = () => {
   };
 
   const closeViewer = () => {
-    imageAnimationToken += 1;
-    isImageAnimating = false;
-    viewerImage.classList.add("no-transition");
-    setSlideX("0%");
+    cancelImageAnimation();
     viewer.classList.remove("active");
     viewer.setAttribute("aria-hidden", "true");
     document.documentElement.classList.remove("gallery-open");
@@ -265,16 +298,21 @@ const initZoom = () => {
     resetPointer(true);
   };
 
-  const animateToIndex = (nextIndex, direction) => {
+  const animateToIndex = async (nextIndex, direction) => {
     if (!zoomImages.length) return;
     if (isImageAnimating) return;
+    const targetItem = zoomImages[nextIndex];
+    if (!targetItem) return;
     isImageAnimating = true;
     const token = (imageAnimationToken += 1);
     resetZoom();
+    const targetSrc = targetItem.dataset.zoom || targetItem.src;
+    await preloadImage(targetSrc);
+    if (token !== imageAnimationToken) return;
 
     if (prefersReducedMotion) {
       currentIndex = nextIndex;
-      setSlideX("0%");
+      setSlideX(viewerImage, "0%");
       renderIndex();
       isImageAnimating = false;
       return;
@@ -282,47 +320,50 @@ const initZoom = () => {
 
     const outX = direction > 0 ? "-100%" : "100%";
     const inX = direction > 0 ? "100%" : "-100%";
-    let outFallback = 0;
-    let inFallback = 0;
+    let fallback = 0;
 
-    const finishIn = () => {
+    const cleanup = () => {
+      clearTimeout(fallback);
+      incomingImage.removeEventListener("transitionend", onDone);
+    };
+
+    const finish = () => {
+      cleanup();
+      if (cleanupImageAnimation === cleanup) cleanupImageAnimation = null;
       if (token !== imageAnimationToken) return;
-      clearTimeout(inFallback);
-      viewerImage.removeEventListener("transitionend", onInDone);
+      currentIndex = nextIndex;
+      viewerImage.classList.add("no-transition");
+      setSlideX(viewerImage, "0%");
+      renderIndex();
+      resetIncomingImage();
+      viewerImage.offsetHeight;
+      viewerImage.classList.remove("no-transition");
       isImageAnimating = false;
     };
 
-    const onInDone = (event) => {
+    const onDone = (event) => {
       if (event.propertyName !== "transform") return;
-      finishIn();
+      finish();
     };
 
-    const finishOut = () => {
+    setImageSource(incomingImage, targetItem);
+    incomingImage.classList.remove("is-hidden");
+    viewerImage.classList.add("no-transition");
+    incomingImage.classList.add("no-transition");
+    setSlideX(viewerImage, "0%");
+    setSlideX(incomingImage, inX);
+    viewerImage.offsetHeight;
+
+    requestAnimationFrame(() => {
       if (token !== imageAnimationToken) return;
-      clearTimeout(outFallback);
-      viewerImage.removeEventListener("transitionend", onOutDone);
-      currentIndex = nextIndex;
-      viewerImage.classList.add("no-transition");
-      setSlideX(inX);
-      renderIndex();
-      viewerImage.offsetHeight;
-      requestAnimationFrame(() => {
-        viewerImage.classList.remove("no-transition");
-        viewerImage.addEventListener("transitionend", onInDone);
-        setSlideX("0%");
-        inFallback = window.setTimeout(finishIn, 280);
-      });
-    };
-
-    const onOutDone = (event) => {
-      if (event.propertyName !== "transform") return;
-      finishOut();
-    };
-
-    viewerImage.classList.remove("no-transition");
-    viewerImage.addEventListener("transitionend", onOutDone);
-    setSlideX(outX);
-    outFallback = window.setTimeout(finishOut, 280);
+      viewerImage.classList.remove("no-transition");
+      incomingImage.classList.remove("no-transition");
+      incomingImage.addEventListener("transitionend", onDone);
+      setSlideX(viewerImage, outX);
+      setSlideX(incomingImage, "0%");
+      fallback = window.setTimeout(finish, 320);
+      cleanupImageAnimation = cleanup;
+    });
   };
 
   const showPrev = () => {
