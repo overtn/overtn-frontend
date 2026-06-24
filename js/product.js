@@ -43,6 +43,7 @@ const renderProduct = async () => {
   clearTimeout(slowMessageTimer);
   const media = getProductMedia(product.slug);
   const images = media.gallery && media.gallery.length ? media.gallery : [media.cover, media.hover];
+  let currentImageIndex = 0;
   const variantsBySize = new Map(product.variants.map((v) => [v.size, v]));
   const sizes = product.variants.map((v) => v.size);
 
@@ -86,7 +87,102 @@ const renderProduct = async () => {
           />
         </div>`
       )
+      .concat(`
+        <div class="mobile-product-gallery" data-mobile-gallery>
+          <div class="mobile-gallery-main" data-mobile-gallery-main>
+            <button class="mobile-gallery-arrow prev" type="button" data-mobile-gallery-prev aria-label="Предыдущее фото"></button>
+            <img
+              src="${images[0]}"
+              alt="${product.name}"
+              data-mobile-gallery-image
+              data-zoom="${images[0]}"
+              data-zoom-full="${images[0]}"
+              data-zoom-index="0"
+              fetchpriority="high"
+              decoding="async"
+            />
+            <button class="mobile-gallery-arrow next" type="button" data-mobile-gallery-next aria-label="Следующее фото"></button>
+          </div>
+          <div class="mobile-gallery-thumbs" data-mobile-gallery-thumbs>
+            ${images
+              .map(
+                (img, index) => `
+                <button class="mobile-gallery-thumb ${index === 0 ? "active" : ""}" type="button" data-mobile-gallery-thumb="${index}" aria-label="Показать фото ${index + 1}">
+                  <img src="${img}" alt="${product.name}" loading="lazy" decoding="async" />
+                </button>`
+              )
+              .join("")}
+          </div>
+        </div>`)
       .join("");
+  }
+
+  const mobileGallery = galleryGrid?.querySelector("[data-mobile-gallery]");
+  const mobileGalleryImage = galleryGrid?.querySelector("[data-mobile-gallery-image]");
+  const mobileGalleryPrev = galleryGrid?.querySelector("[data-mobile-gallery-prev]");
+  const mobileGalleryNext = galleryGrid?.querySelector("[data-mobile-gallery-next]");
+  const mobileGalleryMain = galleryGrid?.querySelector("[data-mobile-gallery-main]");
+  const mobileThumbs = Array.from(galleryGrid?.querySelectorAll("[data-mobile-gallery-thumb]") || []);
+
+  const syncMobileGallery = () => {
+    if (!mobileGalleryImage) return;
+    const image = images[currentImageIndex];
+    mobileGalleryImage.src = image;
+    mobileGalleryImage.dataset.zoom = image;
+    mobileGalleryImage.dataset.zoomFull = image;
+    mobileGalleryImage.dataset.zoomIndex = String(currentImageIndex);
+    mobileThumbs.forEach((thumb, index) => {
+      thumb.classList.toggle("active", index === currentImageIndex);
+    });
+  };
+
+  const setMobileGalleryIndex = (index) => {
+    currentImageIndex = (index + images.length) % images.length;
+    syncMobileGallery();
+  };
+
+  if (mobileGallery && images.length) {
+    mobileGalleryPrev?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setMobileGalleryIndex(currentImageIndex - 1);
+    });
+
+    mobileGalleryNext?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setMobileGalleryIndex(currentImageIndex + 1);
+    });
+
+    mobileThumbs.forEach((thumb) => {
+      thumb.addEventListener("click", (event) => {
+        event.stopPropagation();
+        setMobileGalleryIndex(Number(thumb.dataset.mobileGalleryThumb || 0));
+      });
+    });
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    mobileGalleryMain?.addEventListener(
+      "touchstart",
+      (event) => {
+        if (event.touches.length !== 1) return;
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+      },
+      { passive: true }
+    );
+
+    mobileGalleryMain?.addEventListener(
+      "touchend",
+      (event) => {
+        const touch = event.changedTouches[0];
+        if (!touch) return;
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        if (Math.abs(deltaX) < 42 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+        setMobileGalleryIndex(currentImageIndex + (deltaX < 0 ? 1 : -1));
+      },
+      { passive: true }
+    );
   }
 
   if (sizesWrap) {
@@ -192,7 +288,7 @@ const initZoom = () => {
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
   const refreshImages = () => {
-    zoomImages = Array.from(document.querySelectorAll("[data-gallery-grid] [data-zoom]"));
+    zoomImages = Array.from(document.querySelectorAll("[data-gallery-grid] .gallery-item [data-zoom]"));
     zoomImages.forEach((img, index) => {
       img.dataset.zoomIndex = String(index);
     });
@@ -435,7 +531,7 @@ const initZoom = () => {
     const img = event.target.closest("[data-zoom]");
     if (!img) return;
     refreshImages();
-    const index = zoomImages.indexOf(img);
+    const index = zoomImages.includes(img) ? zoomImages.indexOf(img) : Number(img.dataset.zoomIndex || 0);
     openViewer(index);
   });
 
