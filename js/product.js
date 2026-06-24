@@ -27,6 +27,15 @@ const formatDeliveryText = (text) =>
     .map((line) => line.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char])))
     .join("<br>")}</div>`;
 
+const preloadImageSrc = (src) =>
+  new Promise((resolve) => {
+    const image = new Image();
+    image.onload = resolve;
+    image.onerror = resolve;
+    image.src = src;
+    if (image.complete) resolve();
+  });
+
 const renderProduct = async () => {
   const slug = getProductSlug();
   if (!slug) throw new Error("Не указан id товара");
@@ -92,6 +101,7 @@ const renderProduct = async () => {
           <div class="mobile-gallery-main" data-mobile-gallery-main>
             <button class="mobile-gallery-arrow prev" type="button" data-mobile-gallery-prev aria-label="Предыдущее фото"></button>
             <img
+              class="mobile-gallery-image"
               src="${images[0]}"
               alt="${product.name}"
               data-mobile-gallery-image
@@ -101,6 +111,7 @@ const renderProduct = async () => {
               fetchpriority="high"
               decoding="async"
             />
+            <img class="mobile-gallery-image mobile-gallery-image-next" alt="" aria-hidden="true" data-mobile-gallery-incoming />
             <button class="mobile-gallery-arrow next" type="button" data-mobile-gallery-next aria-label="Следующее фото"></button>
           </div>
           <div class="mobile-gallery-thumbs" data-mobile-gallery-thumbs>
@@ -119,10 +130,12 @@ const renderProduct = async () => {
 
   const mobileGallery = galleryGrid?.querySelector("[data-mobile-gallery]");
   const mobileGalleryImage = galleryGrid?.querySelector("[data-mobile-gallery-image]");
+  const mobileGalleryIncoming = galleryGrid?.querySelector("[data-mobile-gallery-incoming]");
   const mobileGalleryPrev = galleryGrid?.querySelector("[data-mobile-gallery-prev]");
   const mobileGalleryNext = galleryGrid?.querySelector("[data-mobile-gallery-next]");
   const mobileGalleryMain = galleryGrid?.querySelector("[data-mobile-gallery-main]");
   const mobileThumbs = Array.from(galleryGrid?.querySelectorAll("[data-mobile-gallery-thumb]") || []);
+  let mobileGalleryAnimating = false;
 
   const syncMobileGallery = () => {
     if (!mobileGalleryImage) return;
@@ -131,31 +144,90 @@ const renderProduct = async () => {
     mobileGalleryImage.dataset.zoom = image;
     mobileGalleryImage.dataset.zoomFull = image;
     mobileGalleryImage.dataset.zoomIndex = String(currentImageIndex);
+    mobileGalleryImage.style.transform = "";
     mobileThumbs.forEach((thumb, index) => {
       thumb.classList.toggle("active", index === currentImageIndex);
     });
   };
 
-  const setMobileGalleryIndex = (index) => {
-    currentImageIndex = (index + images.length) % images.length;
-    syncMobileGallery();
+  const resetMobileGalleryIncoming = () => {
+    if (!mobileGalleryIncoming) return;
+    mobileGalleryIncoming.classList.add("is-hidden", "no-transition");
+    mobileGalleryIncoming.removeAttribute("src");
+    mobileGalleryIncoming.style.transform = "";
+  };
+
+  const setMobileGalleryIndex = async (index, directionHint = 0) => {
+    if (!images.length || mobileGalleryAnimating) return;
+    const nextIndex = (index + images.length) % images.length;
+    if (nextIndex === currentImageIndex) return;
+    const direction = directionHint || (nextIndex > currentImageIndex ? 1 : -1);
+    const nextImage = images[nextIndex];
+
+    if (!mobileGalleryImage || !mobileGalleryIncoming) {
+      currentImageIndex = nextIndex;
+      syncMobileGallery();
+      return;
+    }
+
+    mobileGalleryAnimating = true;
+    await preloadImageSrc(nextImage);
+
+    const outX = direction > 0 ? "-100%" : "100%";
+    const inX = direction > 0 ? "100%" : "-100%";
+    let fallback = 0;
+
+    const finish = () => {
+      clearTimeout(fallback);
+      mobileGalleryIncoming.removeEventListener("transitionend", onDone);
+      currentImageIndex = nextIndex;
+      mobileGalleryImage.classList.add("no-transition");
+      syncMobileGallery();
+      resetMobileGalleryIncoming();
+      mobileGalleryImage.offsetHeight;
+      mobileGalleryImage.classList.remove("no-transition");
+      mobileGalleryAnimating = false;
+    };
+
+    const onDone = (event) => {
+      if (event.propertyName !== "transform") return;
+      finish();
+    };
+
+    mobileGalleryIncoming.src = nextImage;
+    mobileGalleryIncoming.classList.remove("is-hidden");
+    mobileGalleryImage.classList.add("no-transition");
+    mobileGalleryIncoming.classList.add("no-transition");
+    mobileGalleryImage.style.transform = "translate3d(0, 0, 0)";
+    mobileGalleryIncoming.style.transform = `translate3d(${inX}, 0, 0)`;
+    mobileGalleryImage.offsetHeight;
+
+    requestAnimationFrame(() => {
+      mobileGalleryImage.classList.remove("no-transition");
+      mobileGalleryIncoming.classList.remove("no-transition");
+      mobileGalleryIncoming.addEventListener("transitionend", onDone);
+      mobileGalleryImage.style.transform = `translate3d(${outX}, 0, 0)`;
+      mobileGalleryIncoming.style.transform = "translate3d(0, 0, 0)";
+      fallback = window.setTimeout(finish, 340);
+    });
   };
 
   if (mobileGallery && images.length) {
     mobileGalleryPrev?.addEventListener("click", (event) => {
       event.stopPropagation();
-      setMobileGalleryIndex(currentImageIndex - 1);
+      setMobileGalleryIndex(currentImageIndex - 1, -1);
     });
 
     mobileGalleryNext?.addEventListener("click", (event) => {
       event.stopPropagation();
-      setMobileGalleryIndex(currentImageIndex + 1);
+      setMobileGalleryIndex(currentImageIndex + 1, 1);
     });
 
     mobileThumbs.forEach((thumb) => {
       thumb.addEventListener("click", (event) => {
         event.stopPropagation();
-        setMobileGalleryIndex(Number(thumb.dataset.mobileGalleryThumb || 0));
+        const nextIndex = Number(thumb.dataset.mobileGalleryThumb || 0);
+        setMobileGalleryIndex(nextIndex, nextIndex > currentImageIndex ? 1 : -1);
       });
     });
 
@@ -179,7 +251,7 @@ const renderProduct = async () => {
         const deltaX = touch.clientX - touchStartX;
         const deltaY = touch.clientY - touchStartY;
         if (Math.abs(deltaX) < 42 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
-        setMobileGalleryIndex(currentImageIndex + (deltaX < 0 ? 1 : -1));
+        setMobileGalleryIndex(currentImageIndex + (deltaX < 0 ? 1 : -1), deltaX < 0 ? 1 : -1);
       },
       { passive: true }
     );
@@ -258,6 +330,12 @@ const initZoom = () => {
   const nextButton = document.querySelector("[data-viewer-next]");
   if (!viewer || !viewerImage || !stage) return;
 
+  const viewerIncomingImage = viewerImage.cloneNode(false);
+  viewerIncomingImage.removeAttribute("data-viewer-image");
+  viewerIncomingImage.setAttribute("aria-hidden", "true");
+  viewerIncomingImage.classList.add("is-hidden", "no-transition");
+  stage.appendChild(viewerIncomingImage);
+
   let currentIndex = 0;
   let zoomImages = [];
   let pointerStartX = 0;
@@ -284,6 +362,7 @@ const initZoom = () => {
   let pinchStartY = 0;
   const activePointers = new Map();
   const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const mobileQuery = window.matchMedia?.("(max-width: 980px)");
 
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
@@ -334,6 +413,14 @@ const initZoom = () => {
     isImageAnimating = false;
     viewerImage.classList.remove("is-fading");
     setSlideX(viewerImage, "0%");
+    resetViewerIncomingImage();
+  };
+
+  const resetViewerIncomingImage = () => {
+    viewerIncomingImage.classList.add("is-hidden", "no-transition");
+    viewerIncomingImage.removeAttribute("src");
+    viewerIncomingImage.alt = "";
+    setSlideX(viewerIncomingImage, "0%");
   };
 
   const clampPan = (scale, x, y) => {
@@ -423,6 +510,50 @@ const initZoom = () => {
       setSlideX(viewerImage, "0%");
       renderIndex();
       isImageAnimating = false;
+      return;
+    }
+
+    if (mobileQuery?.matches) {
+      const outX = direction > 0 ? "-100%" : "100%";
+      const inX = direction > 0 ? "100%" : "-100%";
+      let fallback = 0;
+
+      const finish = () => {
+        clearTimeout(fallback);
+        viewerIncomingImage.removeEventListener("transitionend", onDone);
+        if (token !== imageAnimationToken) return;
+        currentIndex = nextIndex;
+        viewerImage.classList.add("no-transition");
+        setSlideX(viewerImage, "0%");
+        renderIndex();
+        resetViewerIncomingImage();
+        viewerImage.offsetHeight;
+        viewerImage.classList.remove("no-transition");
+        isImageAnimating = false;
+      };
+
+      const onDone = (event) => {
+        if (event.propertyName !== "transform") return;
+        finish();
+      };
+
+      setImageSource(viewerIncomingImage, targetItem);
+      viewerIncomingImage.classList.remove("is-hidden");
+      viewerImage.classList.add("no-transition");
+      viewerIncomingImage.classList.add("no-transition");
+      setSlideX(viewerImage, "0%");
+      setSlideX(viewerIncomingImage, inX);
+      viewerImage.offsetHeight;
+
+      requestAnimationFrame(() => {
+        if (token !== imageAnimationToken) return;
+        viewerImage.classList.remove("no-transition");
+        viewerIncomingImage.classList.remove("no-transition");
+        viewerIncomingImage.addEventListener("transitionend", onDone);
+        setSlideX(viewerImage, outX);
+        setSlideX(viewerIncomingImage, "0%");
+        fallback = window.setTimeout(finish, 340);
+      });
       return;
     }
 
