@@ -170,14 +170,49 @@ const initZoom = () => {
   let isPointerActive = false;
   let isPointerSwipe = false;
   let activePointerId = null;
+  let isImageAnimating = false;
+  let imageAnimationToken = 0;
   let suppressStageClick = false;
   let lockedScrollY = 0;
+  let zoomScale = 1;
+  let zoomX = 0;
+  let zoomY = 0;
+  let panOriginX = 0;
+  let panOriginY = 0;
+  let pinchStartDistance = 0;
+  let pinchStartScale = 1;
+  let pinchStartCenterX = 0;
+  let pinchStartCenterY = 0;
+  let pinchStartX = 0;
+  let pinchStartY = 0;
+  const activePointers = new Map();
+  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+  const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
   const refreshImages = () => {
     zoomImages = Array.from(document.querySelectorAll("[data-gallery-grid] [data-zoom]"));
     zoomImages.forEach((img, index) => {
       img.dataset.zoomIndex = String(index);
     });
+  };
+
+  const setSlideX = (value) => {
+    viewerImage.style.setProperty("--viewer-slide-x", value);
+  };
+
+  const applyZoom = () => {
+    viewerImage.style.setProperty("--viewer-zoom", String(zoomScale));
+    viewerImage.style.setProperty("--viewer-pan-x", `${zoomX}px`);
+    viewerImage.style.setProperty("--viewer-pan-y", `${zoomY}px`);
+    viewer.classList.toggle("is-zoomed", zoomScale > 1.01);
+  };
+
+  const resetZoom = () => {
+    zoomScale = 1;
+    zoomX = 0;
+    zoomY = 0;
+    applyZoom();
   };
 
   const renderIndex = () => {
@@ -190,8 +225,15 @@ const initZoom = () => {
   const openViewer = (index) => {
     refreshImages();
     if (!zoomImages.length) return;
+    imageAnimationToken += 1;
+    isImageAnimating = false;
     currentIndex = Math.max(0, Math.min(index, zoomImages.length - 1));
+    viewerImage.classList.add("no-transition");
+    setSlideX("0%");
+    resetZoom();
     renderIndex();
+    viewerImage.offsetHeight;
+    viewerImage.classList.remove("no-transition");
     viewer.classList.add("active");
     viewer.setAttribute("aria-hidden", "false");
     lockedScrollY = window.scrollY || window.pageYOffset || 0;
@@ -205,6 +247,10 @@ const initZoom = () => {
   };
 
   const closeViewer = () => {
+    imageAnimationToken += 1;
+    isImageAnimating = false;
+    viewerImage.classList.add("no-transition");
+    setSlideX("0%");
     viewer.classList.remove("active");
     viewer.setAttribute("aria-hidden", "true");
     document.documentElement.classList.remove("gallery-open");
@@ -215,22 +261,84 @@ const initZoom = () => {
     document.body.style.right = "";
     document.body.style.width = "";
     window.scrollTo(0, lockedScrollY);
-    resetPointer();
+    resetZoom();
+    resetPointer(true);
+  };
+
+  const animateToIndex = (nextIndex, direction) => {
+    if (!zoomImages.length) return;
+    if (isImageAnimating) return;
+    isImageAnimating = true;
+    const token = (imageAnimationToken += 1);
+    resetZoom();
+
+    if (prefersReducedMotion) {
+      currentIndex = nextIndex;
+      setSlideX("0%");
+      renderIndex();
+      isImageAnimating = false;
+      return;
+    }
+
+    const outX = direction > 0 ? "-100%" : "100%";
+    const inX = direction > 0 ? "100%" : "-100%";
+    let outFallback = 0;
+    let inFallback = 0;
+
+    const finishIn = () => {
+      if (token !== imageAnimationToken) return;
+      clearTimeout(inFallback);
+      viewerImage.removeEventListener("transitionend", onInDone);
+      isImageAnimating = false;
+    };
+
+    const onInDone = (event) => {
+      if (event.propertyName !== "transform") return;
+      finishIn();
+    };
+
+    const finishOut = () => {
+      if (token !== imageAnimationToken) return;
+      clearTimeout(outFallback);
+      viewerImage.removeEventListener("transitionend", onOutDone);
+      currentIndex = nextIndex;
+      viewerImage.classList.add("no-transition");
+      setSlideX(inX);
+      renderIndex();
+      viewerImage.offsetHeight;
+      requestAnimationFrame(() => {
+        viewerImage.classList.remove("no-transition");
+        viewerImage.addEventListener("transitionend", onInDone);
+        setSlideX("0%");
+        inFallback = window.setTimeout(finishIn, 280);
+      });
+    };
+
+    const onOutDone = (event) => {
+      if (event.propertyName !== "transform") return;
+      finishOut();
+    };
+
+    viewerImage.classList.remove("no-transition");
+    viewerImage.addEventListener("transitionend", onOutDone);
+    setSlideX(outX);
+    outFallback = window.setTimeout(finishOut, 280);
   };
 
   const showPrev = () => {
     if (!zoomImages.length) return;
-    currentIndex = (currentIndex - 1 + zoomImages.length) % zoomImages.length;
-    renderIndex();
+    const nextIndex = (currentIndex - 1 + zoomImages.length) % zoomImages.length;
+    animateToIndex(nextIndex, -1);
   };
 
   const showNext = () => {
     if (!zoomImages.length) return;
-    currentIndex = (currentIndex + 1) % zoomImages.length;
-    renderIndex();
+    const nextIndex = (currentIndex + 1) % zoomImages.length;
+    animateToIndex(nextIndex, 1);
   };
 
-  const resetPointer = () => {
+  const resetPointer = (clearPointers = false) => {
+    if (clearPointers) activePointers.clear();
     activePointerId = null;
     isPointerActive = false;
     isPointerSwipe = false;
@@ -239,6 +347,41 @@ const initZoom = () => {
     pointerDeltaX = 0;
     pointerDeltaY = 0;
     viewer.classList.remove("is-dragging");
+  };
+
+  const pointerValues = () => Array.from(activePointers.values());
+
+  const pointerDistance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  const pointerCenter = (a, b) => ({
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+  });
+
+  const startPinch = () => {
+    const [first, second] = pointerValues();
+    if (!first || !second) return;
+    const center = pointerCenter(first, second);
+    pinchStartDistance = pointerDistance(first, second) || 1;
+    pinchStartScale = zoomScale;
+    pinchStartCenterX = center.x;
+    pinchStartCenterY = center.y;
+    pinchStartX = zoomX;
+    pinchStartY = zoomY;
+    isPointerSwipe = false;
+    suppressStageClick = true;
+  };
+
+  const startSinglePointerGesture = (point) => {
+    activePointerId = point.id;
+    isPointerActive = true;
+    isPointerSwipe = false;
+    pointerStartX = point.x;
+    pointerStartY = point.y;
+    pointerDeltaX = 0;
+    pointerDeltaY = 0;
+    panOriginX = zoomX;
+    panOriginY = zoomY;
   };
 
   document.addEventListener("click", (event) => {
@@ -266,21 +409,45 @@ const initZoom = () => {
   stage.addEventListener("pointerdown", (event) => {
     if (!viewer.classList.contains("active")) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    activePointerId = event.pointerId;
-    isPointerActive = true;
-    isPointerSwipe = false;
-    pointerStartX = event.clientX;
-    pointerStartY = event.clientY;
-    pointerDeltaX = 0;
-    pointerDeltaY = 0;
+    activePointers.set(event.pointerId, { id: event.pointerId, x: event.clientX, y: event.clientY });
+    if (activePointers.size === 1) {
+      startSinglePointerGesture({ id: event.pointerId, x: event.clientX, y: event.clientY });
+    } else if (activePointers.size === 2) {
+      startPinch();
+    }
     viewer.classList.add("is-dragging");
     stage.setPointerCapture?.(event.pointerId);
   });
 
   stage.addEventListener("pointermove", (event) => {
+    if (!activePointers.has(event.pointerId)) return;
+    activePointers.set(event.pointerId, { id: event.pointerId, x: event.clientX, y: event.clientY });
+
+    if (activePointers.size >= 2) {
+      const [first, second] = pointerValues();
+      const distance = pointerDistance(first, second) || 1;
+      const center = pointerCenter(first, second);
+      zoomScale = clamp(pinchStartScale * (distance / pinchStartDistance), 1, 4);
+      zoomX = pinchStartX + center.x - pinchStartCenterX;
+      zoomY = pinchStartY + center.y - pinchStartCenterY;
+      applyZoom();
+      return;
+    }
+
     if (!isPointerActive || event.pointerId !== activePointerId) return;
     pointerDeltaX = event.clientX - pointerStartX;
     pointerDeltaY = event.clientY - pointerStartY;
+
+    if (zoomScale > 1.01) {
+      zoomX = panOriginX + pointerDeltaX;
+      zoomY = panOriginY + pointerDeltaY;
+      applyZoom();
+      if (Math.abs(pointerDeltaX) > 4 || Math.abs(pointerDeltaY) > 4) {
+        suppressStageClick = true;
+      }
+      return;
+    }
+
     if (Math.abs(pointerDeltaX) > Math.abs(pointerDeltaY) && Math.abs(pointerDeltaX) > 8) {
       isPointerSwipe = true;
     }
@@ -303,12 +470,29 @@ const initZoom = () => {
   };
 
   stage.addEventListener("pointerup", (event) => {
-    if (event.pointerId !== activePointerId) return;
-    commitPointerGesture();
+    const wasSinglePointer = activePointers.size === 1 && event.pointerId === activePointerId;
+    const wasZoomed = zoomScale > 1.01;
+    if (wasSinglePointer && !wasZoomed) {
+      commitPointerGesture();
+    } else {
+      resetPointer();
+    }
+    activePointers.delete(event.pointerId);
+    if (activePointers.size === 1) {
+      const [remaining] = pointerValues();
+      startSinglePointerGesture(remaining);
+      viewer.classList.add("is-dragging");
+    }
   });
 
-  stage.addEventListener("pointercancel", resetPointer);
-  stage.addEventListener("lostpointercapture", resetPointer);
+  stage.addEventListener("pointercancel", (event) => {
+    activePointers.delete(event.pointerId);
+    if (!activePointers.size) resetPointer();
+  });
+  stage.addEventListener("lostpointercapture", (event) => {
+    activePointers.delete(event.pointerId);
+    if (!activePointers.size) resetPointer();
+  });
 
   document.addEventListener("keydown", (event) => {
     if (!viewer.classList.contains("active")) return;
