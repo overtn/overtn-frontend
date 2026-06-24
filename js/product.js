@@ -111,7 +111,7 @@ const renderProduct = async () => {
               fetchpriority="high"
               decoding="async"
             />
-            <img class="mobile-gallery-image mobile-gallery-image-next" alt="" aria-hidden="true" data-mobile-gallery-incoming />
+            <img class="mobile-gallery-image mobile-gallery-image-next is-hidden no-transition" alt="" aria-hidden="true" data-mobile-gallery-incoming />
             <button class="mobile-gallery-arrow next" type="button" data-mobile-gallery-next aria-label="Следующее фото"></button>
           </div>
           <div class="mobile-gallery-thumbs" data-mobile-gallery-thumbs>
@@ -213,6 +213,9 @@ const renderProduct = async () => {
   };
 
   if (mobileGallery && images.length) {
+    syncMobileGallery();
+    resetMobileGalleryIncoming();
+
     mobileGalleryPrev?.addEventListener("click", (event) => {
       event.stopPropagation();
       setMobileGalleryIndex(currentImageIndex - 1, -1);
