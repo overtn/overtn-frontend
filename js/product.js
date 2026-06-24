@@ -80,6 +80,7 @@ const renderProduct = async () => {
             src="${img}"
             alt="${product.name}"
             data-zoom="${img}"
+            data-zoom-index="${index}"
             ${index === 0 ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"'}
           />
         </div>`
@@ -243,7 +244,8 @@ const initZoom = () => {
   document.addEventListener("click", (event) => {
     const img = event.target.closest("[data-zoom]");
     if (!img) return;
-    const index = Number(img.dataset.zoomIndex || 0);
+    refreshImages();
+    const index = zoomImages.indexOf(img);
     openViewer(index);
   });
 
