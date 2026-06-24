@@ -161,12 +161,6 @@ const initZoom = () => {
   const nextButton = document.querySelector("[data-viewer-next]");
   if (!viewer || !viewerImage || !stage) return;
 
-  const incomingImage = viewerImage.cloneNode(false);
-  incomingImage.removeAttribute("data-viewer-image");
-  incomingImage.setAttribute("aria-hidden", "true");
-  incomingImage.classList.add("product-viewer-image--incoming", "is-hidden", "no-transition");
-  stage.appendChild(incomingImage);
-
   let currentIndex = 0;
   let zoomImages = [];
   let pointerStartX = 0;
@@ -178,7 +172,6 @@ const initZoom = () => {
   let activePointerId = null;
   let isImageAnimating = false;
   let imageAnimationToken = 0;
-  let cleanupImageAnimation = null;
   let suppressStageClick = false;
   let lockedScrollY = 0;
   let zoomScale = 1;
@@ -229,23 +222,11 @@ const initZoom = () => {
       if (image.complete) resolve();
     });
 
-  const resetIncomingImage = () => {
-    incomingImage.classList.add("is-hidden", "no-transition");
-    incomingImage.removeAttribute("src");
-    incomingImage.alt = "";
-    setSlideX(incomingImage, "0%");
-  };
-
   const cancelImageAnimation = () => {
     imageAnimationToken += 1;
     isImageAnimating = false;
-    if (cleanupImageAnimation) {
-      cleanupImageAnimation();
-      cleanupImageAnimation = null;
-    }
-    viewerImage.classList.add("no-transition");
+    viewerImage.classList.remove("is-fading");
     setSlideX(viewerImage, "0%");
-    resetIncomingImage();
   };
 
   const resetZoom = () => {
@@ -266,6 +247,7 @@ const initZoom = () => {
     if (!zoomImages.length) return;
     cancelImageAnimation();
     currentIndex = Math.max(0, Math.min(index, zoomImages.length - 1));
+    viewerImage.classList.add("no-transition");
     resetZoom();
     renderIndex();
     viewerImage.offsetHeight;
@@ -318,52 +300,46 @@ const initZoom = () => {
       return;
     }
 
-    const outX = direction > 0 ? "-100%" : "100%";
-    const inX = direction > 0 ? "100%" : "-100%";
-    let fallback = 0;
+    const outX = direction > 0 ? "-12px" : "12px";
+    const inX = direction > 0 ? "12px" : "-12px";
 
-    const cleanup = () => {
-      clearTimeout(fallback);
-      incomingImage.removeEventListener("transitionend", onDone);
-    };
+    const waitForFade = () =>
+      new Promise((resolve) => {
+        let timeout = 0;
+        const done = () => {
+          clearTimeout(timeout);
+          viewerImage.removeEventListener("transitionend", onDone);
+          resolve();
+        };
+        const onDone = (event) => {
+          if (event.propertyName !== "opacity") return;
+          done();
+        };
+        viewerImage.addEventListener("transitionend", onDone);
+        timeout = window.setTimeout(done, 220);
+      });
 
-    const finish = () => {
-      cleanup();
-      if (cleanupImageAnimation === cleanup) cleanupImageAnimation = null;
-      if (token !== imageAnimationToken) return;
-      currentIndex = nextIndex;
-      viewerImage.classList.add("no-transition");
-      setSlideX(viewerImage, "0%");
-      renderIndex();
-      resetIncomingImage();
-      viewerImage.offsetHeight;
-      viewerImage.classList.remove("no-transition");
-      isImageAnimating = false;
-    };
+    viewerImage.classList.remove("no-transition");
+    setSlideX(viewerImage, outX);
+    viewerImage.classList.add("is-fading");
+    await waitForFade();
+    if (token !== imageAnimationToken) return;
 
-    const onDone = (event) => {
-      if (event.propertyName !== "transform") return;
-      finish();
-    };
-
-    setImageSource(incomingImage, targetItem);
-    incomingImage.classList.remove("is-hidden");
+    currentIndex = nextIndex;
     viewerImage.classList.add("no-transition");
-    incomingImage.classList.add("no-transition");
-    setSlideX(viewerImage, "0%");
-    setSlideX(incomingImage, inX);
+    setSlideX(viewerImage, inX);
+    renderIndex();
     viewerImage.offsetHeight;
 
     requestAnimationFrame(() => {
       if (token !== imageAnimationToken) return;
       viewerImage.classList.remove("no-transition");
-      incomingImage.classList.remove("no-transition");
-      incomingImage.addEventListener("transitionend", onDone);
-      setSlideX(viewerImage, outX);
-      setSlideX(incomingImage, "0%");
-      fallback = window.setTimeout(finish, 320);
-      cleanupImageAnimation = cleanup;
+      setSlideX(viewerImage, "0%");
+      viewerImage.classList.remove("is-fading");
     });
+    await waitForFade();
+    if (token !== imageAnimationToken) return;
+    isImageAnimating = false;
   };
 
   const showPrev = () => {

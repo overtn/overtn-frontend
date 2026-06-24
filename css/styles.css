@@ -1038,7 +1038,6 @@ body.gallery-open {
   padding: 0;
   cursor: grab;
   touch-action: none;
-  overflow: hidden;
 }
 
 .product-viewer.is-dragging .product-viewer-stage {
@@ -1065,7 +1064,10 @@ body.gallery-open {
   -webkit-user-drag: none;
   transform: translate3d(var(--viewer-slide-x), 0, 0) translate3d(var(--viewer-pan-x), var(--viewer-pan-y), 0) scale(var(--viewer-zoom));
   transform-origin: center center;
-  transition: transform 0.22s ease;
+  opacity: 1;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
   will-change: transform;
 }
 
@@ -1074,8 +1076,8 @@ body.gallery-open {
   transition: none;
 }
 
-.product-viewer-image.is-hidden {
-  display: none;
+.product-viewer-image.is-fading {
+  opacity: 0.08;
 }
 
 .product-viewer-close {
