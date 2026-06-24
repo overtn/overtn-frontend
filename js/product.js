@@ -80,6 +80,7 @@ const renderProduct = async () => {
             src="${img}"
             alt="${product.name}"
             data-zoom="${img}"
+            data-zoom-full="${img}"
             data-zoom-index="${index}"
             ${index === 0 ? 'fetchpriority="high" decoding="async"' : 'loading="lazy" decoding="async"'}
           />
@@ -202,14 +203,24 @@ const initZoom = () => {
   };
 
   const applyZoom = () => {
+    const clampedPan = clampPan(zoomScale, zoomX, zoomY);
+    zoomScale = clampedPan.scale;
+    zoomX = clampedPan.x;
+    zoomY = clampedPan.y;
     viewerImage.style.setProperty("--viewer-zoom", String(zoomScale));
     viewerImage.style.setProperty("--viewer-pan-x", `${zoomX}px`);
     viewerImage.style.setProperty("--viewer-pan-y", `${zoomY}px`);
     viewer.classList.toggle("is-zoomed", zoomScale > 1.01);
   };
 
+  const getFullImageSrc = (item) =>
+    item.dataset.zoomFull || item.dataset.zoom || item.getAttribute("src") || item.currentSrc || item.src;
+
   const setImageSource = (image, item) => {
-    image.src = item.dataset.zoom || item.src;
+    const src = getFullImageSrc(item);
+    image.removeAttribute("srcset");
+    image.removeAttribute("sizes");
+    image.src = src;
     image.alt = item.alt || "Фото товара";
   };
 
@@ -227,6 +238,25 @@ const initZoom = () => {
     isImageAnimating = false;
     viewerImage.classList.remove("is-fading");
     setSlideX(viewerImage, "0%");
+  };
+
+  const clampPan = (scale, x, y) => {
+    const safeScale = clamp(scale, 1, 4);
+    if (safeScale <= 1.01) {
+      return { scale: 1, x: 0, y: 0 };
+    }
+
+    const stageRect = stage.getBoundingClientRect();
+    const imageWidth = viewerImage.offsetWidth || viewerImage.naturalWidth || stageRect.width;
+    const imageHeight = viewerImage.offsetHeight || viewerImage.naturalHeight || stageRect.height;
+    const maxX = Math.max(0, (imageWidth * safeScale - stageRect.width) / 2);
+    const maxY = Math.max(0, (imageHeight * safeScale - stageRect.height) / 2);
+
+    return {
+      scale: safeScale,
+      x: clamp(x, -maxX, maxX),
+      y: clamp(y, -maxY, maxY),
+    };
   };
 
   const resetZoom = () => {
@@ -288,7 +318,7 @@ const initZoom = () => {
     isImageAnimating = true;
     const token = (imageAnimationToken += 1);
     resetZoom();
-    const targetSrc = targetItem.dataset.zoom || targetItem.src;
+    const targetSrc = getFullImageSrc(targetItem);
     await preloadImage(targetSrc);
     if (token !== imageAnimationToken) return;
 
@@ -444,9 +474,16 @@ const initZoom = () => {
       const [first, second] = pointerValues();
       const distance = pointerDistance(first, second) || 1;
       const center = pointerCenter(first, second);
-      zoomScale = clamp(pinchStartScale * (distance / pinchStartDistance), 1, 4);
-      zoomX = pinchStartX + center.x - pinchStartCenterX;
-      zoomY = pinchStartY + center.y - pinchStartCenterY;
+      const stageRect = stage.getBoundingClientRect();
+      const stageCenterX = stageRect.left + stageRect.width / 2;
+      const stageCenterY = stageRect.top + stageRect.height / 2;
+      const gestureX = pinchStartCenterX - stageCenterX;
+      const gestureY = pinchStartCenterY - stageCenterY;
+      const nextScale = clamp(pinchStartScale * (distance / pinchStartDistance), 1, 4);
+      const scaleRatio = nextScale / pinchStartScale;
+      zoomScale = nextScale;
+      zoomX = pinchStartX + center.x - pinchStartCenterX + (gestureX - pinchStartX) * (1 - scaleRatio);
+      zoomY = pinchStartY + center.y - pinchStartCenterY + (gestureY - pinchStartY) * (1 - scaleRatio);
       applyZoom();
       return;
     }
@@ -509,6 +546,11 @@ const initZoom = () => {
   stage.addEventListener("lostpointercapture", (event) => {
     activePointers.delete(event.pointerId);
     if (!activePointers.size) resetPointer();
+  });
+
+  window.addEventListener("resize", () => {
+    if (!viewer.classList.contains("active")) return;
+    applyZoom();
   });
 
   document.addEventListener("keydown", (event) => {
