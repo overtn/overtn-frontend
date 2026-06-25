@@ -263,6 +263,27 @@ const getProductImageAttrs = (index, kind = "base") => {
   return attrs.join(" ");
 };
 
+const PRODUCT_IMAGE_PLACEHOLDER = "/assets/logo-placeholder.svg";
+
+const getProductCardImages = (product) => {
+  const images = Array.isArray(product.images)
+    ? product.images.filter((image) => image?.url)
+    : [];
+  if (!images.length) {
+    return {
+      base: PRODUCT_IMAGE_PLACEHOLDER,
+      hover: PRODUCT_IMAGE_PLACEHOLDER,
+    };
+  }
+
+  const primary = images.find((image) => image.isPrimary) || images[0];
+  const hover = images.find((image) => image.id !== primary.id) || primary;
+  return {
+    base: primary.url,
+    hover: hover.url,
+  };
+};
+
 const initProducts = async () => {
   const grid = document.querySelector("[data-products]");
   if (!grid) return;
@@ -275,17 +296,20 @@ const initProducts = async () => {
     clearTimeout(slowTimer);
     catalogProducts = products;
     grid.innerHTML = products
-      .map((product, index) => `
+      .map((product, index) => {
+        const cardImages = getProductCardImages(product);
+        return `
       <a class="product-card" href="/product/?id=${product.slug}">
         <div class="product-media">
-          <img class="base" src="${getProductMedia(product.slug).cover}" alt="${product.name}" ${getProductImageAttrs(index, "base")} />
-          <img class="hover" src="${getProductMedia(product.slug).hover}" alt="${product.name}" ${getProductImageAttrs(index, "hover")} />
+          <img class="base" src="${cardImages.base}" alt="${product.name}" ${getProductImageAttrs(index, "base")} />
+          <img class="hover" src="${cardImages.hover}" alt="${product.name}" ${getProductImageAttrs(index, "hover")} />
         </div>
         <div class="product-info">
           <h4>${product.name}</h4>
           <span>${product.variants[0] ? `${(product.variants[0].priceMinor / 100).toLocaleString("ru-RU")} RUB` : "Нет в наличии"}</span>
         </div>
-      </a>`)
+      </a>`;
+      })
       .join("");
     if (!products.length) {
       grid.innerHTML = `<div class="muted">Товары пока не добавлены.</div>`;
