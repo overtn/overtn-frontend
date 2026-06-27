@@ -1598,16 +1598,37 @@ body.gallery-open {
 }
 
 @media (min-width: 981px) {
+  .pvz-map-slot [class$="-balloon"],
+  .pvz-map-slot [class*="-balloon "] {
+    border: 0 !important;
+    border-radius: 24px !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+  }
+
   .pvz-map-slot [class*="balloon__layout"] {
-    border-radius: 16px !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-radius: 24px !important;
+    outline: 0 !important;
     overflow: hidden !important;
-    box-shadow: 0 16px 36px rgba(20, 16, 14, 0.16) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
   }
 
   .pvz-map-slot [class*="balloon__content"] {
     margin: 0 !important;
     padding: 16px 18px !important;
-    border-radius: 16px !important;
+    border: 0 !important;
+    border-radius: 24px !important;
+    outline: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .pvz-map-slot [class*="balloon__layout"]::before,
+  .pvz-map-slot [class*="balloon__layout"]::after,
+  .pvz-map-slot [class*="balloon__content"]::before,
+  .pvz-map-slot [class*="balloon__content"]::after {
+    border: 0 !important;
+    outline: 0 !important;
   }
 
   .pvz-map-slot .pvz-map-balloon > .pvz-map-popup-close {
