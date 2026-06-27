@@ -52,6 +52,37 @@ const getProductMedia = (slug) => ({
   ...(PRODUCT_MEDIA[slug] || {}),
 });
 
+const PRODUCT_IMAGE_PLACEHOLDER = "/assets/logo-placeholder.svg";
+
+const getLegacyProductImage = (slug) => {
+  const media = typeof getProductMedia === "function" ? getProductMedia(slug) : null;
+  if (media?.cover && !media.cover.includes("logo-placeholder")) return media.cover;
+  return null;
+};
+
+const getProductCardImages = (product, options = {}) => {
+  const images = Array.isArray(product?.images)
+    ? product.images.filter((image) => image?.url)
+    : [];
+  if (!images.length) {
+    const legacyImage = options.useLegacyFallback ? getLegacyProductImage(product?.slug || product?.id || "") : null;
+    const fallback = product?.image || legacyImage || PRODUCT_IMAGE_PLACEHOLDER;
+    return {
+      base: fallback,
+      hover: fallback,
+    };
+  }
+
+  const primary = images.find((image) => image.isPrimary) || images[0];
+  const hover = images.find((image) => image.id !== primary.id) || primary;
+  return {
+    base: primary.url,
+    hover: hover.url,
+  };
+};
+
+const getProductPreviewImage = (product, options = {}) => getProductCardImages(product, options).base;
+
 const sliderItems = [
   { title: "", subtitle: "", image: "/assets/slider-1.webp", link: "/buyers/" },
   { title: "", subtitle: "", image: "/assets/slider-2.png", link: "/support/" },

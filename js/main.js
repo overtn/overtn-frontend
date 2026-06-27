@@ -263,27 +263,6 @@ const getProductImageAttrs = (index, kind = "base") => {
   return attrs.join(" ");
 };
 
-const PRODUCT_IMAGE_PLACEHOLDER = "/assets/logo-placeholder.svg";
-
-const getProductCardImages = (product) => {
-  const images = Array.isArray(product.images)
-    ? product.images.filter((image) => image?.url)
-    : [];
-  if (!images.length) {
-    return {
-      base: PRODUCT_IMAGE_PLACEHOLDER,
-      hover: PRODUCT_IMAGE_PLACEHOLDER,
-    };
-  }
-
-  const primary = images.find((image) => image.isPrimary) || images[0];
-  const hover = images.find((image) => image.id !== primary.id) || primary;
-  return {
-    base: primary.url,
-    hover: hover.url,
-  };
-};
-
 const initProducts = async () => {
   const grid = document.querySelector("[data-products]");
   if (!grid) return;

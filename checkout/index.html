@@ -319,9 +319,9 @@
       };
 
       const resolveCartItemImage = (item) => {
-        const slug = item.id || "";
-        const media = typeof getProductMedia === "function" ? getProductMedia(slug) : null;
-        if (media?.cover && !media.cover.includes("logo-placeholder")) return media.cover;
+        if (typeof getProductPreviewImage === "function") {
+          return getProductPreviewImage({ id: item.id, slug: item.id, images: item.images, image: item.image }, { useLegacyFallback: true });
+        }
         return item.image || "/assets/logo-placeholder.svg";
       };
 

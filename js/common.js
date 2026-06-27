@@ -8,9 +8,9 @@ const reachMetrikaGoal = (goal) => {
 };
 
 const resolveCartItemImage = (item) => {
-  const slug = item.id || "";
-  const media = typeof getProductMedia === "function" ? getProductMedia(slug) : null;
-  if (media?.cover && !media.cover.includes("logo-placeholder")) return media.cover;
+  if (typeof getProductPreviewImage === "function") {
+    return getProductPreviewImage({ id: item.id, slug: item.id, images: item.images, image: item.image }, { useLegacyFallback: true });
+  }
   return item.image || "/assets/logo-placeholder.svg";
 };
 
@@ -265,8 +265,9 @@ const addToCart = (product, size = null) => {
   if (existing) {
     existing.qty += 1;
   } else {
-    const media = getProductMedia(product.slug);
-    const image = media.cover;
+    const image = typeof getProductPreviewImage === "function"
+      ? getProductPreviewImage(product, { useLegacyFallback: true })
+      : product.image || "/assets/logo-placeholder.svg";
     cart.push({
       id: product.slug,
       variantId: matchedVariant.id,
@@ -276,6 +277,7 @@ const addToCart = (product, size = null) => {
       qty: 1,
       size: sizeLabel,
       image,
+      images: Array.isArray(product.images) ? product.images : [],
       availableQty: available,
     });
   }
