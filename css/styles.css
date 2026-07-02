@@ -2408,7 +2408,8 @@ body.gallery-open {
   line-height: 1.2;
   letter-spacing: 0;
   color: var(--ink);
-  text-decoration: none;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .cookie-banner__policy:hover {
