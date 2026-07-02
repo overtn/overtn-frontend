@@ -341,6 +341,13 @@
       };
       const setCart = (cart) => localStorage.setItem(cartKey, JSON.stringify(cart));
       const formatRub = (value) => `${Math.max(0, value).toLocaleString("ru-RU")} RUB`;
+      const formatRubMinor = (minor) => {
+        const normalized = Math.max(0, Number(minor || 0));
+        return `${(normalized / 100).toLocaleString("ru-RU", {
+          minimumFractionDigits: normalized % 100 === 0 ? 0 : 2,
+          maximumFractionDigits: 2,
+        })} RUB`;
+      };
       const normalizePhone = (digits10) => `7${digits10}`;
       const getShippingMethod = () => shippingMethod;
       const parsePhoneDigits = (value) => (value || "").replace(/\D/g, "").slice(0, 10);
@@ -499,19 +506,19 @@
 
       const rerenderSummary = () => {
         const subtotal = getSubtotal();
-        const shippingCost = shippingQuote?.shippingCostMinor ? Math.round(shippingQuote.shippingCostMinor / 100) : 0;
+        const shippingCostMinor = shippingQuote?.shippingCostMinor ? Number(shippingQuote.shippingCostMinor) : 0;
         const appliedDiscount = getAppliedDiscount();
         const discount = appliedDiscount.amount;
-        const total = Math.max(subtotal - discount + shippingCost, 0);
+        const totalMinor = Math.max((subtotal * 100) - (discount * 100) + shippingCostMinor, 0);
         subtotalEl.textContent = formatRub(subtotal);
-        shippingEl.textContent = shippingCost ? formatRub(shippingCost) : "—";
+        shippingEl.textContent = shippingCostMinor ? formatRubMinor(shippingCostMinor) : "—";
         shippingSummaryEl.innerHTML = renderShippingSummaryHtml();
         discountRow.hidden = discount <= 0;
         if (discountLabel) {
           discountLabel.textContent = appliedDiscount.type === "bundle_discount" ? "Скидка за комплект" : "Промокод";
         }
         discountEl.textContent = `-${formatRub(discount)}`;
-        totalEl.textContent = formatRub(total);
+        totalEl.textContent = formatRubMinor(totalMinor);
       };
 
       const rerenderOrder = () => {
@@ -1362,7 +1369,7 @@
           if (reqId !== quoteRequestId) return;
           shippingQuote = quote;
           const days = quote.deliveryDaysMin && quote.deliveryDaysMax ? `${quote.deliveryDaysMin}-${quote.deliveryDaysMax} дней` : "срок уточняется";
-          shippingQuoteEl.textContent = `Доставка: ${formatRub(Math.round(quote.shippingCostMinor / 100))}, ${days}.`;
+          shippingQuoteEl.textContent = `Доставка: ${formatRubMinor(quote.shippingCostMinor)}, ${days}.`;
           rerenderSummary();
           validateForm();
         } catch (error) {
