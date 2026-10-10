@@ -52,7 +52,7 @@ const renderProduct = async () => {
   clearTimeout(slowMessageTimer);
   const media = getProductMedia(product.slug);
   const apiImages = Array.isArray(product.images)
-    ? product.images.map((image) => image.url).filter(Boolean)
+    ? product.images.map((image) => window.normalizeProductImageUrl(image.url)).filter(Boolean)
     : [];
   const images = apiImages.length ? apiImages : (media.gallery && media.gallery.length ? media.gallery : [media.cover, media.hover]);
   let currentImageIndex = 0;

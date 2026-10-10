@@ -61,6 +61,7 @@ const getLegacyProductImage = (slug) => {
 };
 
 const getProductCardImages = (product, options = {}) => {
+  product = window.normalizeProductImageData(product || {});
   const images = Array.isArray(product?.images)
     ? product.images.filter((image) => image?.url)
     : [];
