@@ -54,6 +54,23 @@ const getProductMedia = (slug) => ({
 
 const PRODUCT_IMAGE_PLACEHOLDER = "/assets/logo-placeholder.svg";
 
+const getPublicProductImageUrl = (url) => {
+  if (!url || typeof url !== "string") return url;
+  try {
+    const parsed = new URL(url);
+    let key;
+    if (parsed.origin === "https://api.overtn.ru" && parsed.pathname.startsWith("/images/products/")) {
+      key = parsed.pathname.slice("/images/".length);
+    } else if (parsed.origin === "https://s3.twcstorage.ru" && parsed.pathname.startsWith("/overtn-assets/products/")) {
+      key = parsed.pathname.slice("/overtn-assets/".length);
+    } else return url;
+    key = decodeURIComponent(key);
+    if (parsed.username || parsed.password || key.length > 1024 || !/^products\/[\w.-]+\/[\w.-]+$/.test(key)
+      || key.split("/").some((part) => part === "." || part === "..")) return url;
+    return `https://assets.overtn.ru/${key.split("/").map(encodeURIComponent).join("/")}`;
+  } catch { return url; }
+};
+
 const getLegacyProductImage = (slug) => {
   const media = typeof getProductMedia === "function" ? getProductMedia(slug) : null;
   if (media?.cover && !media.cover.includes("logo-placeholder")) return media.cover;
@@ -61,13 +78,12 @@ const getLegacyProductImage = (slug) => {
 };
 
 const getProductCardImages = (product, options = {}) => {
-  product = window.normalizeProductImageData(product || {});
   const images = Array.isArray(product?.images)
     ? product.images.filter((image) => image?.url)
     : [];
   if (!images.length) {
     const legacyImage = options.useLegacyFallback ? getLegacyProductImage(product?.slug || product?.id || "") : null;
-    const fallback = product?.image || legacyImage || PRODUCT_IMAGE_PLACEHOLDER;
+    const fallback = getPublicProductImageUrl(product?.image) || legacyImage || PRODUCT_IMAGE_PLACEHOLDER;
     return {
       base: fallback,
       hover: fallback,
@@ -77,8 +93,8 @@ const getProductCardImages = (product, options = {}) => {
   const primary = images.find((image) => image.isPrimary) || images[0];
   const hover = images.find((image) => image.id !== primary.id) || primary;
   return {
-    base: primary.url,
-    hover: hover.url,
+    base: getPublicProductImageUrl(primary.url),
+    hover: getPublicProductImageUrl(hover.url),
   };
 };
 

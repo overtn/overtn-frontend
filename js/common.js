@@ -11,13 +11,16 @@ const resolveCartItemImage = (item) => {
   if (typeof getProductPreviewImage === "function") {
     return getProductPreviewImage({ id: item.id, slug: item.id, images: item.images, image: item.image }, { useLegacyFallback: true });
   }
-  return window.normalizeProductImageUrl(item.image) || "/assets/logo-placeholder.svg";
+  return item.image || "/assets/logo-placeholder.svg";
 };
 
-const normalizeCartItems = (items) => items.map((item) => {
-  const normalized = window.normalizeProductImageData(item);
-  return { ...normalized, image: resolveCartItemImage(normalized) };
-});
+const normalizeCartItems = (items) => items.map((item) => ({
+  ...item,
+  ...(Array.isArray(item.images) ? {
+    images: item.images.map((image) => ({ ...image, url: getPublicProductImageUrl(image.url) })),
+  } : {}),
+  image: resolveCartItemImage(item),
+}));
 
 const sweatshirtSlugs = new Set(["arc-sweatshirt", "over-sweatshirt"]);
 const sweatpantsSlugs = new Set(["arc-sweatpants", "over-big-sweatpants", "over-sweatpants"]);
